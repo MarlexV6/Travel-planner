@@ -1,0 +1,103 @@
+.cal-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.cal-calendar-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 30px;
+}
+
+.cal-tile-content {
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.cal-trips-list {
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.cal-trip-card {
+  background: white;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.cal-trip-card:hover {
+  transform: translateX(5px);
+}
+
+.cal-trip-card h4 {
+  margin: 0 0 5px 0;
+}
+
+.cal-trip-card p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+
+/* Легенда календаря */
+.cal-legend {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 10px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.cal-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.cal-legend-color {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+
+.cal-legend-free {
+  background-color: white;
+  border: 1px solid #ddd;
+}
+
+.cal-legend-occupied {
+  background-color: #e8f5e9;
+  border: 1px solid #4caf50;
+}
+
+.cal-legend-past {
+  background-color: #f5f5f5;
+  border: 1px solid #ccc;
+}
+
+/* Стили для ячеек календаря */
+.cal-tile-occupied {
+  background-color: #e8f5e9 !important;
+  border-radius: 4px;
+}
+
+.cal-tile-past {
+  opacity: 0.6;
+  background-color: #f5f5f5 !important;
+  text-decoration: line-through;
+}
+
+/* Обычная ячейка при наведении */
+.react-calendar__tile:hover {
+  background-color: #e3f2fd !important;
+}

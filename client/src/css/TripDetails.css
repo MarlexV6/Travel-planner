@@ -1,0 +1,396 @@
+.trip-details-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.trip-details-header {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 15px;
+}
+
+.trip-details-title-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.trip-details-title-section h1 {
+  margin: 0;
+  font-size: 28px;
+  color: #333;
+}
+
+.trip-details-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-edit {
+  padding: 8px 16px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-delete {
+  padding: 8px 16px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.trip-details-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.trip-dates {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.trip-details-nav {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-map, .btn-back {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn-map {
+  background: #FF9800;
+  color: white;
+}
+
+.btn-back {
+  background: #666;
+  color: white;
+}
+
+.error-message {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.success-message {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.trip-details-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tab-active {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid #2196F3;
+  color: #2196F3;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.tab-inactive {
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.add-point-section {
+  background: #f5f5f5;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+}
+
+.add-point-section h2 {
+  margin: 0 0 15px 0;
+  font-size: 20px;
+}
+
+.add-point-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.form-input {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
+}
+
+.btn-add-point {
+  padding: 12px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.btn-add-point:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.points-section {
+  margin-top: 20px;
+}
+
+.points-section h2 {
+  margin: 0 0 15px 0;
+  font-size: 20px;
+}
+
+.empty-points {
+  text-align: center;
+  padding: 40px;
+  background: #fafafa;
+  border-radius: 8px;
+  color: #666;
+}
+
+.points-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.point-card {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.point-header {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.point-number {
+  width: 32px;
+  height: 32px;
+  background: #2196F3;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.point-title {
+  flex: 1;
+}
+
+.point-title h3 {
+  margin: 0 0 5px 0;
+  font-size: 16px;
+}
+
+.point-title p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.point-delete {
+  padding: 5px 10px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.point-coords {
+  font-size: 12px;
+  color: #999;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.loading {
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+}
+
+
+
+/* Модальные окна */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 450px;
+  max-width: 90%;
+  padding: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h2, .modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #999;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.modal-close-btn:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.modal-message {
+  padding: 20px;
+  margin: 0;
+  color: #333;
+}
+
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.modal-button-confirm {
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modal-button-danger {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modal-button-cancel {
+  background: #e0e0e0;
+  color: #333;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.modal-button-confirm:hover,
+.modal-button-danger:hover,
+.modal-button-cancel:hover {
+  opacity: 0.8;
+}
+
+.modal-warning {
+  padding: 0 20px 0 20px;
+  margin: 0;
+  color: #f44336;
+  font-size: 14px;
+}

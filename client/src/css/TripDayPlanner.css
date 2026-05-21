@@ -1,0 +1,283 @@
+.day-planner-container {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 12px;
+}
+
+.day-planner-empty {
+  text-align: center;
+  padding: 40px;
+  background: #f9f9f9;
+  border-radius: 12px;
+}
+
+.btn-generate-days {
+  padding: 12px 24px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 15px;
+}
+
+.day-navigation {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 10px 0;
+  margin-bottom: 20px;
+}
+
+.day-button {
+  min-width: 100px;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  background: #f5f5f5;
+  color: #333;
+  transition: all 0.3s;
+}
+
+.day-button-active {
+  background: #2196F3;
+  color: white;
+}
+
+.day-content {
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+}
+
+.day-points-list {
+  margin-top: 15px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.no-points {
+  text-align: center;
+  padding: 30px;
+  color: #666;
+}
+
+.day-point-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 15px;
+  margin-bottom: 10px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  border-left: 4px solid #2196F3;
+}
+
+.day-point-time {
+  min-width: 100px;
+  font-weight: bold;
+  color: #2196F3;
+  font-size: 14px;
+}
+
+.day-point-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.day-point-address {
+  color: #666;
+  font-size: 13px;
+}
+
+.day-point-notes {
+  color: #888;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.day-point-delete {
+  padding: 5px 10px;
+  background: none;
+  color: #f44336;
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.add-day-point-form {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.add-day-point-form h5 {
+  margin: 0 0 15px 0;
+  font-size: 16px;
+}
+
+.form-row {
+  margin-bottom: 10px;
+}
+
+.time-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.form-input-time {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  min-height: 80px;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.btn-add-day-point {
+  width: 100%;
+  padding: 12px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 10px;
+}
+
+.btn-add-day-point:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.day-planner-loading {
+  text-align: center;
+  padding: 30px;
+  color: #666;
+}
+
+.modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0,0,0,0.5);
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 1000;
+        }
+        .modal-content {
+          background: white;
+          padding: 24px;
+          border-radius: 12px;
+          width: 500px;
+          max-width: 90%;
+          max-height: 80vh;
+          overflow-y: auto;
+        }
+        .distribute-list {
+          margin: 20px 0;
+          max-height: 400px;
+          overflow-y: auto;
+        }
+        .distribute-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px;
+          margin-bottom: 8px;
+          background: #f5f5f5;
+          border-radius: 8px;
+          gap: 15px;
+          flex-wrap: wrap;
+        }
+        .distribute-point-info {
+          flex: 1;
+        }
+        .distribute-point-address {
+          display: block;
+          font-size: 11px;
+          color: #666;
+          margin-top: 4px;
+        }
+        .distribute-select {
+          padding: 8px;
+          border-radius: 6px;
+          border: 1px solid #ddd;
+          min-width: 140px;
+        }
+        .btn-close-distribute {
+          width: 100%;
+          padding: 10px;
+          background: #2196F3;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+        }
+        .day-point-actions {
+          display: flex;
+          gap: 8px;
+        }
+        .day-point-remove {
+          padding: 4px 8px;
+          background: #FF9800;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 12px;
+        }
+        .day-point-number {
+          width: 28px;
+          height: 28px;
+          background: #2196F3;
+          color: white;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          font-size: 12px;
+        }
+        .day-point-card {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 12px;
+          margin-bottom: 10px;
+          background: #f5f5f5;
+          border-radius: 8px;
+          border-left: 4px solid #2196F3;
+        }
+        .day-point-details {
+          flex: 1;
+        }
+        .day-point-address {
+          display: block;
+          font-size: 12px;
+          color: #666;
+          margin-top: 4px;
+        }

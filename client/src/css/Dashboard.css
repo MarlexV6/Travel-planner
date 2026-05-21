@@ -1,0 +1,198 @@
+.dash-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.dash-admin-toggle {
+  display: flex;
+  gap: 10px;
+}
+
+.dash-toggle {
+  padding: 8px 16px;
+  background: #e0e0e0;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.dash-toggle-active {
+  padding: 8px 16px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.dash-loading {
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+}
+
+.dash-error {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.dash-success {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.dash-two-column-layout {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 30px;
+}
+
+@media (max-width: 768px) {
+  .dash-two-column-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dash-form-column {
+  background: #f5f5f5;
+  padding: 25px;
+  border-radius: 12px;
+}
+
+.dash-form-group {
+  margin-bottom: 15px;
+}
+
+.dash-form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.dash-trips-column {
+  background: #f5f5f5;
+  padding: 25px;
+  border-radius: 12px;
+}
+
+.dash-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.dash-submit-button {
+  width: 100%;
+  padding: 12px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.dash-submit-button:hover {
+  background: #1976D2;
+}
+
+.dash-trips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dash-trip-card {
+  background: white;
+  padding: 16px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dash-trip-info {
+  flex: 1;
+}
+
+.dash-trip-title {
+  margin: 0 0 5px 0;
+  font-size: 18px;
+}
+
+.dash-trip-user {
+  margin: 0 0 5px 0;
+  font-size: 13px;
+  color: #666;
+}
+
+.dash-trip-date {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.dash-button-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dash-details-button {
+  padding: 8px 14px;
+  background: #4CAF50;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+  font-size: 14px;
+}
+
+.dash-map-button {
+  padding: 8px 14px;
+  background: #FF9800;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+  font-size: 14px;
+}
+
+.dash-delete-button {
+  padding: 8px 14px;
+  background: #f44336;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: white;
+  font-size: 14px;
+}
+
+.dash-empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}

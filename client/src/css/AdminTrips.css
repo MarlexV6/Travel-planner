@@ -1,0 +1,117 @@
+.at-container {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.at-loading {
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+}
+
+.at-search-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.at-search-input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  max-width: 400px;
+}
+
+.at-stats {
+  padding: 10px 20px;
+  background: #e3f2fd;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+.at-trips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.at-trip-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+
+.at-trip-card:hover {
+  transform: translateY(-2px);
+}
+
+.at-trip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+.at-trip-header h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.at-trip-info {
+  margin-bottom: 15px;
+}
+
+.at-trip-info p {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.at-trip-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.at-details-button {
+  flex: 1;
+  padding: 8px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.at-map-button {
+  flex: 1;
+  padding: 8px;
+  background: #FF9800;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.at-delete-button {
+  padding: 5px 10px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.at-empty-state {
+  text-align: center;
+  padding: 50px;
+  color: #666;
+}

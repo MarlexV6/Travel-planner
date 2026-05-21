@@ -1,0 +1,398 @@
+.au-container {
+  padding: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.au-loading {
+  text-align: center;
+  padding: 50px;
+  font-size: 18px;
+}
+
+.au-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.au-header-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.au-export-button {
+  padding: 10px 20px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.au-add-button {
+  padding: 10px 20px;
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.au-message {
+  padding: 12px;
+  margin-bottom: 20px;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.au-message-success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.au-message-warning {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+.au-message-error {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.au-stats-bar {
+  display: flex;
+  gap: 30px;
+  padding: 15px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.au-table-wrapper {
+  overflow-x: auto;
+}
+
+.au-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 8px;
+}
+
+.au-table th {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  background: #f5f5f5;
+}
+
+.au-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.au-row-current {
+  background: #e3f2fd;
+}
+
+.au-role-badge-admin {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #f44336;
+  color: white;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.au-role-badge-user {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #4CAF50;
+  color: white;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.au-role-select {
+  padding: 5px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+}
+
+.au-action-buttons {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.au-edit-button {
+  padding: 5px 10px;
+  background: #FF9800;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.au-delete-button {
+  padding: 5px 10px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.au-delete-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.au-save-button {
+  padding: 5px 10px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.au-cancel-button {
+  padding: 5px 10px;
+  background: #999;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.au-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.au-modal-content {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  width: 400px;
+  max-width: 90%;
+}
+
+.au-form-group {
+  margin-bottom: 15px;
+}
+
+.au-form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.au-form-input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.au-form-select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+.au-modal-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.au-modal-submit {
+  flex: 1;
+  padding: 10px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.au-modal-cancel {
+  flex: 1;
+  padding: 10px;
+  background: #999;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Кнопка с количеством поездок */
+.au-trips-count-button {
+  background: #2196F3;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.au-trips-count-button:hover {
+  background: #0b7dda;
+  transform: scale(1.05);
+}
+
+/* Модальное окно большого размера */
+.au-modal-large {
+  width: 800px;
+  max-width: 90%;
+}
+
+.au-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.au-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #999;
+}
+
+.au-modal-close:hover {
+  color: #f44336;
+}
+
+.au-modal-body {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.au-loading-trips {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+}
+
+.au-no-trips {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+
+.au-user-trips-list {
+  padding: 10px;
+}
+
+.au-trips-stats {
+  display: flex;
+  gap: 20px;
+  padding: 10px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.au-user-trips-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.au-user-trip-card {
+  background: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 15px;
+  transition: all 0.2s;
+}
+
+.au-user-trip-card:hover {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.au-trip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.au-trip-header h4 {
+  margin: 0;
+  color: #2196F3;
+}
+
+.au-trip-link {
+  color: #4CAF50;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.au-trip-link:hover {
+  text-decoration: underline;
+}
+
+.au-trip-dates {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.au-trip-meta {
+  display: flex;
+  gap: 20px;
+  font-size: 12px;
+  color: #999;
+}
+
+.au-modal-footer {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+  text-align: right;
+}
+
+.au-modal-close-button {
+  padding: 8px 20px;
+  background: #999;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.au-modal-close-button:hover {
+  background: #777;
+}

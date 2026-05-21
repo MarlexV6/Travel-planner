@@ -1,0 +1,57 @@
+**/lectures
+
+# === Unity generated folders (don't commit) ===
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+MemoryCaptures/
+
+# User-specific settings
+UserSettings/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+
+# Visual Studio / Rider / IDE
+.vs/
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Built plugin files (if you store builds locally)
+*.apk
+*.aab
+*.unitypackage
+
+# Cache / Crash reports / Profiling
+*.stacktrace
+crash_reports/
+Profiler/
+*.log
+
+# Optional: large intermediate files
+*.obj
+*.pdb
+
+# Keep these (important for Unity collaboration)
+!Assets/**/*.meta
+!ProjectSettings/**
+
+# If you use Packages/manifest.json and Packages/packages-lock.json - keep them
+!Packages/manifest.json
+!Packages/packages-lock.json

@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  postgres-db:
+    image: postgis/postgis:15-3.4
+    container_name: travel_planner_db
+    environment:
+      POSTGRES_USER: Travel_test
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: travel_planner
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./Server/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - travel_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U Travel_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    
+  backend:
+    build: ./Server
+    container_name: travel_planner_backend
+    expose:
+      - "5000"
+    environment:
+      - DATABASE_URL=postgresql://Travel_test:1234@postgres-db:5432/travel_planner
+      - JWT_SECRET=TestKeyForCourseProjectMadeSpecifficalyForTesting2026!
+      - NODE_ENV=production
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - travel_network
+    restart: unless-stopped
+
+  frontend:
+    build: ./client
+    container_name: travel_planner_frontend
+    expose:
+      - "3000"
+    environment:
+      - REACT_APP_API_URL=/api
+      - REACT_APP_GOOGLE_MAPS_API_KEY=${REACT_APP_GOOGLE_MAPS_API_KEY}
+    depends_on:
+      - backend
+    stdin_open: true
+    tty: true
+    networks:
+      - travel_network
+    restart: unless-stopped
+
+  nginx:
+    build: ./nginx
+    container_name: travel_planner_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - travel_network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  travel_network:
+    driver: bridge
+
+
+
