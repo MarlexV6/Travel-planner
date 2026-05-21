@@ -55,3 +55,4 @@ Profiler/
 # If you use Packages/manifest.json and Packages/packages-lock.json - keep them
 !Packages/manifest.json
 !Packages/packages-lock.json
+.env
