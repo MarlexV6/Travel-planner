@@ -1,674 +1,209 @@
+/* TripMap.css */
 .tm-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px;
 }
-
 .tm-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-}
-
-.tm-back-button {
-  padding: 10px 20px;
-  background: #666;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.tm-add-form {
-  margin-bottom: 20px;
-  padding: 15px;
-  background: #f5f5f5;
-  border-radius: 8px;
-}
-
-.tm-address-form {
-  display: flex;
-  gap: 10px;
-}
-
-.tm-address-input {
-  flex: 1;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 16px;
-}
-
-.tm-add-button {
-  padding: 12px 24px;
-  background: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-.tm-hint {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #666;
-  text-align: center;
-}
-
-.tm-places-section {
-  margin-bottom: 20px;
-  padding: 15px;
-  background: #f5f5f5;
-  border-radius: 8px;
-}
-
-.tm-places-controls {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
 }
-
-.tm-places-button {
-  padding: 10px 20px;
-  background: #9C27B0;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
+.tm-header h1 {
+  font-size: 24px;
 }
-
+.tm-add-form {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+.tm-address-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.tm-address-input {
+  flex: 1;
+}
+.tm-hint {
+  font-size: 12px;
+  color: #8b949e;
+}
+.tm-places-section {
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+.tm-places-controls {
+  display: flex;
+  gap: 16px;
+  margin: 12px 0;
+  flex-wrap: wrap;
+}
 .tm-city-search {
   display: flex;
-  gap: 10px;
-  flex: 1;
+  gap: 8px;
 }
-
 .tm-city-input {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
+  width: 180px;
 }
-
-.tm-search-button {
-  padding: 10px 20px;
-  background: #2196F3;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.tm-loading-places {
-  text-align: center;
-  padding: 20px;
-  color: #666;
-}
-
 .tm-places-list {
-  margin-top: 10px;
+  margin-top: 16px;
+  max-height: 300px;
+  overflow-y: auto;
 }
-
 .tm-places-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 10px;
-  margin-top: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
 }
-
 .tm-place-card {
-  background: white;
-  padding: 12px;
+  background-color: #21262d;
   border-radius: 8px;
-  border: 1px solid #e0e0e0;
+  padding: 12px;
 }
-
 .tm-place-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
 }
-
 .tm-place-category {
-  font-size: 11px;
-  padding: 2px 8px;
-  background: #e3f2fd;
-  border-radius: 12px;
-  color: #1976D2;
+  font-size: 12px;
+  color: #8b949e;
 }
-
 .tm-add-place-button {
-  padding: 4px 12px;
-  background: #4CAF50;
-  color: white;
+  background-color: #2f81f7;
   border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  padding: 2px 8px;
   font-size: 12px;
 }
-
 .tm-place-name {
-  font-weight: bold;
-  font-size: 14px;
+  font-weight: 600;
   margin-bottom: 4px;
 }
-
-.tm-place-address {
-  font-size: 11px;
-  color: #666;
-  margin-bottom: 4px;
+.tm-place-address, .tm-place-description {
+  font-size: 12px;
+  color: #8b949e;
 }
-
-.tm-place-description {
-  font-size: 11px;
-  color: #888;
-  margin-top: 4px;
-}
-
-.tm-no-places {
-  text-align: center;
-  padding: 20px;
-  color: #666;
-}
-
 .tm-route-info {
-  margin-bottom: 15px;
+  margin-bottom: 16px;
 }
-
 .tm-route-card {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  background: #e3f2fd;
-  padding: 15px;
+  background-color: #161b22;
+  border: 1px solid #30363d;
   border-radius: 8px;
-  margin-bottom: 10px;
-}
-
-.tm-route-icon {
-  font-size: 32px;
-}
-
-.tm-optimize-button {
-  width: 100%;
   padding: 12px;
-  background: #FF9800;
+}
+.tm-optimize-button, .tm-optimize-button-disabled {
+  margin-bottom: 16px;
+  background-color: #2f81f7;
   color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-  margin-bottom: 15px;
 }
-
 .tm-optimize-button-disabled {
-  width: 100%;
-  padding: 12px;
-  background: #ccc;
-  color: #666;
-  border: none;
-  border-radius: 6px;
-  font-size: 16px;
-  margin-bottom: 15px;
+  opacity: 0.6;
   cursor: not-allowed;
 }
-
 .tm-map-container {
-  margin-bottom: 20px;
-  border-radius: 8px;
+  margin-bottom: 24px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border: 1px solid #30363d;
 }
-
-.tm-delete-popup-button {
-  margin-top: 8px;
-  padding: 4px 8px;
-  background: #f44336;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
 .tm-points-section {
-  margin-top: 20px;
-  padding: 15px;
-  background: #f5f5f5;
-  border-radius: 8px;
+  background-color: #161b22;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #30363d;
 }
-
 .tm-points-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.tm-point-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: white;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #e0e0e0;
-  cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.tm-point-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-
-.tm-point-number {
-  width: 28px;
-  height: 28px;
-  background: #2196F3;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: bold;
-  font-size: 12px;
-}
-
-.tm-point-info {
-  flex: 1;
-}
-
-.tm-point-name {
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.tm-point-address {
-  font-size: 11px;
-  color: #666;
-}
-
-.tm-remove-button {
-  width: 28px;
-  height: 28px;
-  background: #f44336;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.tm-empty-state {
-  text-align: center;
-  padding: 20px;
-  background: white;
-  border-radius: 8px;
-  color: #666;
-}
-
-.tm-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0,0,0,0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.tm-modal-content {
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  width: 400px;
-  max-width: 90%;
-}
-
-.tm-modal-buttons {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.tm-modal-danger {
-  padding: 10px 20px;
-  background: #f44336;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.tm-modal-cancel {
-  padding: 10px 20px;
-  background: #999;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-
-.places-list {
-  margin-top: 10px;
-}
-
-.places-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.place-card {
-  background: white;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-}
-
-.place-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.place-category {
-  font-size: 11px;
-  padding: 2px 8px;
-  background: #e3f2fd;
-  border-radius: 12px;
-  color: #1976D2;
-}
-
-.add-place-button {
-  padding: 4px 12px;
-  background: #4CAF50;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.place-name {
-  font-weight: bold;
-  font-size: 14px;
-  margin-bottom: 4px;
-}
-
-.place-address {
-  font-size: 11px;
-  color: #666;
-  margin-bottom: 4px;
-}
-
-.place-description {
-  font-size: 11px;
-  color: #888;
-  margin-top: 4px;
-}
-
-.no-places {
-  text-align: center;
-  padding: 20px;
-  color: #666;
-}
-
-
-/* Результат оптимизации */
-.optimize-result {
-  text-align: center;
-}
-
-.optimize-success {
-  padding: 20px;
-}
-
-.optimize-icon {
-  font-size: 64px;
-  margin-bottom: 15px;
-}
-
-.optimize-title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 20px;
-  color: #2196F3;
-}
-
-.optimize-details {
-  text-align: left;
-  background: #f5f5f5;
-  padding: 15px;
-  border-radius: 8px;
-  margin-top: 15px;
-}
-
-.optimize-details div {
-  margin-bottom: 8px;
-}
-
-.optimize-improvement {
-  color: #4CAF50;
-  font-weight: bold;
-  font-size: 18px;
-  margin: 10px 0;
-}
-
-.optimize-note {
-  color: #FF9800;
-  font-size: 12px;
-  margin-top: 10px;
-}
-
-/* Кнопка распределения точек */
-.btn-distribute {
-  background: #2196F3;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.3s;
-}
-
-.btn-distribute:hover {
-  background: #1976D2;
-}
-
-/* Модальное окно распределения */
-.distribute-list {
+  gap: 12px;
+  margin-top: 12px;
   max-height: 400px;
   overflow-y: auto;
 }
-
-.distribute-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  margin-bottom: 10px;
-  background: #f5f5f5;
+.tm-point-card {
+  background-color: #21262d;
   border-radius: 8px;
-  gap: 15px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: border 0.2s;
+  border: 1px solid transparent;
 }
-
-.distribute-point-info {
+.tm-point-card:hover {
+  border-color: #2f81f7;
+}
+.tm-point-number {
+  font-weight: bold;
+  min-width: 30px;
+}
+.tm-point-info {
   flex: 1;
 }
-
-.distribute-point-info strong {
-  display: block;
-  margin-bottom: 4px;
+.tm-point-name {
+  font-weight: 500;
 }
-
-.distribute-point-address {
+.tm-point-address {
   font-size: 12px;
-  color: #666;
+  color: #8b949e;
 }
-
-.distribute-select {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: white;
+.tm-remove-button {
+  background: none;
+  border: none;
+  color: #f85149;
+  font-size: 18px;
   cursor: pointer;
 }
-
-
-
-
-/* Модальное окно добавления достопримечательности */
 .add-place-confirmation {
-  text-align: center;
-  padding: 10px;
+  background-color: #21262d;
+  padding: 16px;
+  border-radius: 8px;
 }
-
 .add-place-name {
   font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #2196F3;
-}
-
-.add-place-address {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 10px;
-}
-
-.add-place-category {
-  display: inline-block;
-  padding: 4px 12px;
-  background: #e3f2fd;
-  border-radius: 20px;
-  font-size: 12px;
-  color: #1976D2;
-  margin-bottom: 10px;
-}
-
-.add-place-description {
-  font-size: 13px;
-  color: #555;
-  margin-top: 10px;
-  padding: 10px;
-  background: #f5f5f5;
-  border-radius: 6px;
-}
-
-.add-place-coords {
-  font-size: 11px;
-  color: #999;
-  margin-top: 10px;
-}
-
-.adding-place-loader {
-  text-align: center;
-  padding: 20px;
-  color: #666;
-}
-
-/* Результат оптимизации */
-.optimize-result {
-  text-align: center;
-}
-
-.optimize-success {
-  padding: 10px;
-}
-
-.optimize-icon {
-  font-size: 48px;
-  margin-bottom: 15px;
-}
-
-.optimize-title {
-  font-size: 18px;
-  font-weight: bold;
-  margin-bottom: 20px;
-}
-
-.optimize-title.success {
-  color: #4CAF50;
-}
-
-.optimize-title.info {
-  color: #FF9800;
-}
-
-.optimize-details {
-  text-align: left;
-  background: #f5f5f5;
-  padding: 15px;
-  border-radius: 8px;
-  margin-top: 15px;
-}
-
-.optimize-details div {
+  font-weight: 600;
   margin-bottom: 8px;
 }
-
-.optimize-old-order,
-.optimize-new-order {
-  margin-bottom: 10px;
-}
-
-.optimize-old-order strong,
-.optimize-new-order strong {
-  display: block;
-  margin-bottom: 5px;
-}
-
-.optimize-old-order div,
-.optimize-new-order div {
+.add-place-address, .add-place-category, .add-place-description, .add-place-coords {
   font-size: 13px;
-  color: #555;
-  word-break: break-word;
+  margin-bottom: 4px;
+  color: #8b949e;
 }
-
-.optimize-improvement {
-  color: #4CAF50;
-  font-weight: bold;
-  font-size: 16px;
-  margin: 10px 0;
-  text-align: center;
+.optimize-result {
+  padding: 8px 0;
 }
-
-.optimize-note {
-  color: #FF9800;
-  font-size: 12px;
-  margin-top: 10px;
-  text-align: center;
+.optimize-title {
+  font-weight: 600;
+  margin-bottom: 12px;
 }
-
-/* Кнопка распределения точек */
-.btn-distribute {
-  background: #2196F3;
-  color: white;
-  border: none;
-  padding: 8px 16px;
+.optimize-title.success {
+  color: #3fb950;
+}
+.optimize-title.info {
+  color: #2f81f7;
+}
+.optimize-details {
+  background-color: #21262d;
+  padding: 12px;
   border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background 0.3s;
 }
-
-.btn-distribute:hover {
-  background: #1976D2;
+.optimize-old-order, .optimize-new-order {
+  margin-bottom: 8px;
+}
+.optimize-improvement {
+  color: #e3b341;
+  font-weight: 500;
+  margin: 8px 0;
 }

@@ -1,87 +1,59 @@
+/* Register.css */
 .reg-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 80px);
-  background: #f5f5f5;
+  min-height: 80vh;
+  padding: 24px;
 }
-
 .reg-form-container {
-  background: white;
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 12px;
+  padding: 32px;
   width: 100%;
   max-width: 400px;
 }
-
-.reg-input-group {
-  margin-bottom: 1rem;
+.reg-form-container h2 {
+  font-size: 24px;
+  margin-bottom: 24px;
+  text-align: center;
 }
-
+.reg-error, .reg-success {
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+.reg-error {
+  background-color: rgba(248, 81, 73, 0.1);
+  border: 1px solid #f85149;
+  color: #f85149;
+}
+.reg-success {
+  background-color: rgba(63, 185, 80, 0.1);
+  border: 1px solid #3fb950;
+  color: #3fb950;
+}
+.reg-input-group {
+  margin-bottom: 16px;
+}
 .reg-input-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: bold;
+  margin-bottom: 4px;
+  font-weight: 500;
 }
-
 .reg-input {
   width: 100%;
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1rem;
-  box-sizing: border-box;
 }
-
 .reg-button {
   width: 100%;
-  padding: 0.75rem;
-  background: #2196F3;
+  background-color: #2f81f7;
   color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
+  margin-top: 8px;
 }
-
-.reg-button:hover {
-  background: #1976D2;
-}
-
-.reg-button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.reg-error {
-  background: #ffebee;
-  color: #c62828;
-  padding: 0.5rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
-.reg-success {
-  background: #e8f5e9;
-  color: #2e7d32;
-  padding: 0.5rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
 .reg-login-link {
-  margin-top: 20px;
   text-align: center;
-}
-
-.reg-login-link a {
-  color: #2196F3;
-  text-decoration: none;
-}
-
-.reg-login-link a:hover {
-  text-decoration: underline;
+  margin-top: 20px;
+  font-size: 14px;
 }

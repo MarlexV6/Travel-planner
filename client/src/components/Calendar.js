@@ -3,15 +3,15 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import '../css/Calendar.css';
 
 function TripCalendar() {
-  const [trips, setTrips] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [tripsOnDate, setTripsOnDate] = useState([]);
   const { token } = useAuth();
-  const navigate = useNavigate();
+  const [trips, setTrips] = useState([]);
+  const [selectedTrip, setSelectedTrip] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [activeStartDate, setActiveStartDate] = useState(new Date());
+  const [tripDays, setTripDays] = useState([]);
 
   useEffect(() => {
     fetchTrips();
@@ -28,61 +28,109 @@ function TripCalendar() {
     }
   };
 
-  const getTileContent = ({ date, view }) => {
+  const fetchTripDays = async (tripId) => {
+    try {
+      const response = await axios.get(`/api/trips/${tripId}/days`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setTripDays(response.data);
+    } catch (error) {
+      console.error('Error fetching trip days:', error);
+      setTripDays([]);
+    }
+  };
+
+  const handleTripClick = (trip) => {
+    const tripStartDate = new Date(trip.start_date);
+    setSelectedTrip(trip);
+    setSelectedDate(tripStartDate);
+    // Перелистываем календарь на месяц начала поездки
+    setActiveStartDate(new Date(tripStartDate.getFullYear(), tripStartDate.getMonth(), 1));
+    fetchTripDays(trip.id);
+  };
+
+  const tileClassName = ({ date, view }) => {
     if (view !== 'month') return null;
-    
-    const tripsOnThisDate = trips.filter(trip => {
-      const start = new Date(trip.start_date);
-      const end = new Date(trip.end_date);
-      return date >= start && date <= end;
+    if (!selectedTrip) return null;
+    const start = new Date(selectedTrip.start_date);
+    const end = new Date(selectedTrip.end_date);
+    if (date >= start && date <= end) {
+      return 'calendar__trip-range';
+    }
+    const hasPoint = tripDays.some(day => {
+      const dayDate = new Date(day.date);
+      return dayDate.toDateString() === date.toDateString() && day.points?.length > 0;
     });
-    
-    if (tripsOnThisDate.length > 0) {
-      return (
-        <div className="cal-tile-content">
-          {tripsOnThisDate.length === 1 ? '!' : `!${tripsOnThisDate.length}`}
-        </div>
-      );
+    if (hasPoint) return 'calendar__has-points';
+    return null;
+  };
+
+  const tileContent = ({ date, view }) => {
+    if (view !== 'month') return null;
+    const dayPlan = tripDays.find(d => new Date(d.date).toDateString() === date.toDateString());
+    if (dayPlan && dayPlan.points && dayPlan.points.length > 0) {
+      return <span className="calendar__day-points">{dayPlan.points.length}📍</span>;
     }
     return null;
   };
 
-  const handleDateClick = (date) => {
-    setSelectedDate(date);
-    const tripsOnSelectedDate = trips.filter(trip => {
-      const start = new Date(trip.start_date);
-      const end = new Date(trip.end_date);
-      return date >= start && date <= end;
-    });
-    setTripsOnDate(tripsOnSelectedDate);
-  };
-
   return (
-    <div className="cal-container">
-      <h1>Календарь поездок</h1>
-      
-      <div className="cal-calendar-container">
+    <div className="calendar-page">
+      <div className="calendar-container">
         <Calendar
-          onChange={handleDateClick}
+          onChange={setSelectedDate}
+          onActiveStartDateChange={({ activeStartDate }) => setActiveStartDate(activeStartDate)}
+          activeStartDate={activeStartDate}
           value={selectedDate}
-          tileContent={getTileContent}
+          tileClassName={tileClassName}
+          tileContent={tileContent}
           locale="ru-RU"
         />
       </div>
-      
-      {tripsOnDate.length > 0 && (
-        <div className="cal-trips-list">
-          <h3>Поездки на {selectedDate.toLocaleDateString('ru-RU')}:</h3>
-          {tripsOnDate.map(trip => (
-            <div key={trip.id} className="cal-trip-card" onClick={() => navigate(`/trips/${trip.id}`)}>
+      <div className="trips-list-container">
+        <h3>Мои поездки</h3>
+        {trips.length === 0 && <p>Нет поездок</p>}
+        <div className="trips-list">
+          {trips.map(trip => (
+            <div
+              key={trip.id}
+              className={`trip-card ${selectedTrip?.id === trip.id ? 'active' : ''}`}
+              onClick={() => handleTripClick(trip)}
+            >
               <h4>{trip.title}</h4>
-              <p>{new Date(trip.start_date).toLocaleDateString()} - {new Date(trip.end_date).toLocaleDateString()}</p>
+              <p>{new Date(trip.start_date).toLocaleDateString()} – {new Date(trip.end_date).toLocaleDateString()}</p>
             </div>
           ))}
         </div>
-      )}
+        {selectedTrip && (
+          <div className="selected-trip-details">
+            <h4>Детали: {selectedTrip.title}</h4>
+            {tripDays.length === 0 && <p>Нет запланированных дней (сгенерируйте дни в планировщике)</p>}
+            <ul>
+              {tripDays.map(day => (
+                <li key={day.id}>
+                  <strong>День {day.day_number} ({new Date(day.date).toLocaleDateString()})</strong>
+                  {day.points?.length > 0 ? (
+                    <ul>
+                      {day.points.map(point => (
+                        <li key={point.id}>{point.place_name}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span> – нет точек</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 export default TripCalendar;
+
+
+
+// маршруты строятся неправильно. Ещё раз повторяю. При добавлении точки и при невозможности отправиться в эту точку на машине, должен автоматически искаться ближайший порт (автоматически добавляется точка для этого порта) и идёт до ближайшего ко второй точке порта (который нужен для передвижения к второй точке) откуда уже будет построен маршрут до второй точки

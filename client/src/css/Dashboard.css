@@ -1,198 +1,140 @@
+/* Dashboard.css */
 .dash-container {
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px;
 }
-
 .dash-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 15px;
+  margin-bottom: 24px;
 }
-
+.dash-header h1 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
 .dash-admin-toggle {
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  background-color: #161b22;
+  padding: 6px;
+  border-radius: 8px;
+  width: fit-content;
 }
-
-.dash-toggle {
-  padding: 8px 16px;
-  background: #e0e0e0;
-  border: none;
+.dash-toggle, .dash-toggle-active {
+  padding: 6px 16px;
   border-radius: 6px;
   cursor: pointer;
+  font-size: 14px;
 }
-
+.dash-toggle {
+  background-color: transparent;
+  color: #c9d1d9;
+}
 .dash-toggle-active {
-  padding: 8px 16px;
-  background: #2196F3;
+  background-color: #2f81f7;
   color: white;
   border: none;
+}
+.dash-error, .dash-success {
+  padding: 12px 16px;
   border-radius: 6px;
-  cursor: pointer;
+  margin-bottom: 20px;
 }
-
-.dash-loading {
-  text-align: center;
-  padding: 50px;
-  font-size: 18px;
-}
-
 .dash-error {
-  background: #ffebee;
-  color: #c62828;
-  padding: 12px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  text-align: center;
+  background-color: rgba(248, 81, 73, 0.1);
+  border: 1px solid #f85149;
+  color: #f85149;
 }
-
 .dash-success {
-  background: #e8f5e9;
-  color: #2e7d32;
-  padding: 12px;
-  border-radius: 6px;
-  margin-bottom: 20px;
-  text-align: center;
+  background-color: rgba(63, 185, 80, 0.1);
+  border: 1px solid #3fb950;
+  color: #3fb950;
 }
-
 .dash-two-column-layout {
   display: grid;
   grid-template-columns: 1fr 2fr;
-  gap: 30px;
+  gap: 32px;
 }
-
 @media (max-width: 768px) {
   .dash-two-column-layout {
     grid-template-columns: 1fr;
   }
 }
-
 .dash-form-column {
-  background: #f5f5f5;
-  padding: 25px;
+  background-color: #161b22;
   border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #30363d;
 }
-
 .dash-form-group {
-  margin-bottom: 15px;
+  margin-bottom: 16px;
 }
-
 .dash-form-group label {
   display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
+  margin-bottom: 4px;
+  font-weight: 500;
 }
-
-.dash-trips-column {
-  background: #f5f5f5;
-  padding: 25px;
-  border-radius: 12px;
-}
-
 .dash-input {
   width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 16px;
-  box-sizing: border-box;
 }
-
 .dash-submit-button {
   width: 100%;
-  padding: 12px;
-  background: #2196F3;
+  background-color: #2f81f7;
   color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
 }
-
-.dash-submit-button:hover {
-  background: #1976D2;
+.dash-trips-column {
+  background-color: #161b22;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #30363d;
 }
-
 .dash-trips-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-height: 600px;
+  overflow-y: auto;
 }
-
 .dash-trip-card {
-  background: white;
-  padding: 16px;
-  border-radius: 10px;
+  background-color: #21262d;
+  border-radius: 8px;
+  padding: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
 }
-
 .dash-trip-info {
   flex: 1;
 }
-
 .dash-trip-title {
-  margin: 0 0 5px 0;
-  font-size: 18px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
 }
-
 .dash-trip-user {
-  margin: 0 0 5px 0;
   font-size: 13px;
-  color: #666;
+  color: #8b949e;
 }
-
 .dash-trip-date {
-  margin: 0;
-  color: #666;
-  font-size: 14px;
+  font-size: 13px;
+  color: #8b949e;
 }
-
 .dash-button-group {
   display: flex;
   gap: 8px;
-  flex-wrap: wrap;
 }
-
-.dash-details-button {
-  padding: 8px 14px;
-  background: #4CAF50;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  color: white;
-  font-size: 14px;
+.dash-details-button, .dash-map-button, .dash-delete-button {
+  font-size: 12px;
+  padding: 4px 12px;
 }
-
-.dash-map-button {
-  padding: 8px 14px;
-  background: #FF9800;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  color: white;
-  font-size: 14px;
-}
-
 .dash-delete-button {
-  padding: 8px 14px;
-  background: #f44336;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  color: white;
-  font-size: 14px;
+  background-color: transparent;
+  border-color: #f85149;
+  color: #f85149;
 }
-
 .dash-empty-state {
   text-align: center;
-  padding: 40px;
-  color: #666;
+  padding: 48px;
+  color: #8b949e;
 }

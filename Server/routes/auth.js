@@ -144,4 +144,41 @@ router.post('/login', async (req, res) => {
 
 
 
+
+// В callback после создания пользователя проверяем, был ли он только что создан
+// и если да – добавляем параметр newUser=true в редирект.
+router.get('/google/callback',
+  passport.authenticate('google', {
+    failureRedirect: 'http://localhost:3000/login?error=oauth_failed',
+    session: true
+  }),
+  (req, res) => {
+    try {
+      const user = req.user;
+      // Предположим, что поле isNew установлено в стратегии, либо проверим по дате создания
+      // Для простоты проверяем, что пользователь только что создан (например, время создания менее минуты)
+      const isNew = (Date.now() - new Date(user.created_at).getTime()) < 60000;
+      const token = jwt.sign(
+        { id: user.id, username: user.username, role: user.role },
+        SECRET_KEY,
+        { expiresIn: '24h' }
+      );
+      let redirectUrl = `http://localhost:3000/oauth-callback?token=${token}&user=${encodeURIComponent(JSON.stringify({
+        id: user.id,
+        username: user.username,
+        role: user.role,
+        email: user.email,
+        email_verified: true
+      }))}`;
+      if (isNew) {
+        redirectUrl += '&newUser=true';
+      }
+      res.redirect(redirectUrl);
+    } catch (error) {
+      res.redirect('http://localhost:3000/login?error=oauth_failed');
+    }
+  }
+);
+
+
 module.exports = router;

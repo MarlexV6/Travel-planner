@@ -1,5 +1,44 @@
 const axios = require('axios');
 
+// Проверить, что место находится на суше, а не в воде
+function isValidLandLocation(location) {
+    // Исключаем водные объекты
+    const waterTypes = [
+        'sea', 'ocean', 'strait', 'channel', 'bay', 'gulf', 'water',
+        'river', 'lake', 'pond', 'creek', 'stream', 'waterway'
+    ];
+    
+    const waterClasses = ['natural', 'waterway'];
+    
+    // Проверяем тип объекта
+    if (location.type && waterTypes.includes(location.type.toLowerCase())) {
+        return false;
+    }
+    
+    // Проверяем класс объекта
+    if (location.class && waterClasses.includes(location.class) && 
+        location.type && waterTypes.includes(location.type.toLowerCase())) {
+        return false;
+    }
+    
+    // Для природных объектов проверяем, это не водоем
+    if (location.class === 'natural' && location.type === 'water') {
+        return false;
+    }
+    
+    // Хорошее место должно иметь хоть какой-то адрес (город, деревню и т.д.)
+    if (location.address) {
+        const hasCity = location.address.city || location.address.town || 
+                       location.address.village || location.address.county ||
+                       location.address.state || location.address.country;
+        if (!hasCity) {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
 async function geocodeAddress(address) {
     try {
         console.log('Geocoding address:', address);
@@ -8,7 +47,7 @@ async function geocodeAddress(address) {
             params: {
                 q: address,
                 format: 'json',
-                limit: 1,
+                limit: 10,  // Получаем несколько результатов
                 addressdetails: 1,
                 'accept-language': 'ru'
             },
@@ -19,40 +58,54 @@ async function geocodeAddress(address) {
         });
         
         if (response.data && response.data.length > 0) {
-            const location = response.data[0];
+            // Фильтруем результаты: выбираем первый валидный результат
+            let validLocation = null;
+            for (const location of response.data) {
+                if (isValidLandLocation(location)) {
+                    validLocation = location;
+                    break;
+                }
+            }
+            
+            // Если нет валидного результата на суше, используем первый результат с предупреждением
+            if (!validLocation) {
+                console.warn('No land location found for address:', address);
+                validLocation = response.data[0];
+            }
             
             // Формируем понятный адрес
             let formattedAddress = '';
-            if (location.address) {
+            if (validLocation.address) {
                 const parts = [];
-                if (location.address.road) parts.push(location.address.road);
-                if (location.address.house_number) parts.push(location.address.house_number);
-                if (location.address.city || location.address.town || location.address.village) {
-                    parts.push(location.address.city || location.address.town || location.address.village);
+                if (validLocation.address.road) parts.push(validLocation.address.road);
+                if (validLocation.address.house_number) parts.push(validLocation.address.house_number);
+                if (validLocation.address.city || validLocation.address.town || validLocation.address.village) {
+                    parts.push(validLocation.address.city || validLocation.address.town || validLocation.address.village);
                 }
-                if (location.address.country) parts.push(location.address.country);
+                if (validLocation.address.country) parts.push(validLocation.address.country);
                 formattedAddress = parts.join(', ');
             }
             
             // Определяем название места
             let placeName = '';
-            if (location.address) {
-                placeName = location.address.name || 
-                           location.address.road || 
-                           location.address.city || 
-                           location.address.town || 
-                           location.address.village ||
+            if (validLocation.address) {
+                placeName = validLocation.address.name || 
+                           validLocation.address.road || 
+                           validLocation.address.city || 
+                           validLocation.address.town || 
+                           validLocation.address.village ||
                            address.split(',')[0];
             } else {
                 placeName = address.split(',')[0];
             }
             
             return {
-                latitude: parseFloat(location.lat),
-                longitude: parseFloat(location.lon),
-                display_name: location.display_name,
-                address: formattedAddress || location.display_name,
-                place_name: placeName
+                latitude: parseFloat(validLocation.lat),
+                longitude: parseFloat(validLocation.lon),
+                display_name: validLocation.display_name,
+                address: formattedAddress || validLocation.display_name,
+                place_name: placeName,
+                confidence: parseFloat(validLocation.importance || 0.5)
             };
         }
         return null;
@@ -79,6 +132,14 @@ async function reverseGeocode(lat, lon) {
         });
         
         if (response.data) {
+            // Проверяем, не находимся ли мы в воде
+            if (response.data.address) {
+                const isLand = isValidLandLocation(response.data);
+                if (!isLand) {
+                    console.warn('Reverse geocoded location appears to be in water:', lat, lon);
+                }
+            }
+            
             let formattedAddress = '';
             let placeName = '';
             

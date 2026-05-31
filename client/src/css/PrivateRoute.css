@@ -1,8 +1,9 @@
+/* PrivateRoute.css */
 .pr-loading {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 200px;
+  height: 100vh;
   font-size: 18px;
-  color: #666;
+  color: #8b949e;
 }

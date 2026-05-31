@@ -1,5 +1,89 @@
 const axios = require('axios');
 
+// Получить картинку для достопримечательности с таймаутом
+async function getImageForPlace(placeName, category) {
+    try {
+        // Используем Promise.race с таймаутом для предотвращения зависаний
+        const imagePromise = getImageFromWikipedia(placeName);
+        const timeoutPromise = new Promise((resolve) => 
+            setTimeout(() => resolve(null), 3000)  // 3 секунды таймаут
+        );
+        
+        return await Promise.race([imagePromise, timeoutPromise]);
+    } catch (error) {
+        console.error('Error fetching image for place:', placeName, error.message);
+        return null;
+    }
+}
+
+async function getImageFromWikipedia(placeName) {
+    try {
+        // Пытаемся получить изображение с Wikimedia Commons через Wikipedia API
+        const searchResponse = await axios.get('https://en.wikipedia.org/w/api.php', {
+            params: {
+                action: 'query',
+                format: 'json',
+                titles: placeName,
+                prop: 'pageimages',
+                pithumbsize: 300,
+                origin: '*'
+            },
+            timeout: 2500
+        });
+
+        const pages = searchResponse.data.query.pages;
+        for (const page of Object.values(pages)) {
+            if (page.thumbnail) {
+                return page.thumbnail.source;
+            }
+        }
+
+        // Если нет, пытаемся найти через Wikimedia Commons
+        const commonsResponse = await axios.get('https://commons.wikimedia.org/w/api.php', {
+            params: {
+                action: 'query',
+                format: 'json',
+                list: 'search',
+                srsearch: placeName,
+                srnamespace: '6', // File namespace
+                srlimit: 1,
+                origin: '*'
+            },
+            timeout: 2500
+        });
+
+        if (commonsResponse.data.query.search && commonsResponse.data.query.search.length > 0) {
+            const fileName = commonsResponse.data.query.search[0].title;
+            const fileInfoResponse = await axios.get('https://commons.wikimedia.org/w/api.php', {
+                params: {
+                    action: 'query',
+                    titles: fileName,
+                    prop: 'imageinfo',
+                    iiprop: 'url',
+                    format: 'json',
+                    origin: '*'
+                },
+                timeout: 2500
+            });
+
+            const filePages = fileInfoResponse.data.query.pages;
+            for (const page of Object.values(filePages)) {
+                if (page.imageinfo && page.imageinfo[0]) {
+                    const url = page.imageinfo[0].url;
+                    if (url) {
+                        return url;
+                    }
+                }
+            }
+        }
+
+        return null;
+    } catch (error) {
+        console.error('Error fetching image from Wikipedia for:', placeName, error.message);
+        return null;
+    }
+}
+
 async function getPlacesNearby(lat, lng, radius = 5000) {
     try {
         const latMin = lat - (radius / 90000);
@@ -70,7 +154,18 @@ async function getPlacesNearby(lat, lng, radius = 5000) {
             }
         }
         
-        return uniquePlaces.slice(0, 40);
+        // Получаем изображения для мест асинхронно
+        const placesWithImages = await Promise.all(
+            uniquePlaces.slice(0, 40).map(async (place) => {
+                const imageUrl = await getImageForPlace(place.name, place.category);
+                return {
+                    ...place,
+                    image_url: imageUrl
+                };
+            })
+        );
+        
+        return placesWithImages;
     } catch (error) {
         console.error('Error fetching places:', error.message);
         return [];
@@ -176,27 +271,88 @@ async function searchPlacesByCity(cityName) {
 function getPopularPlaces(cityName) {
     const popularPlaces = {
         'Минск': [
-            { name: 'Площадь Независимости', address: 'Минск, площадь Независимости', category: 'Площадь', latitude: 53.893009, longitude: 27.567444, description: 'Главная площадь Минска' },
-            { name: 'Национальная библиотека Беларуси', address: 'Минск, проспект Независимости, 116', category: 'Библиотека', latitude: 53.931333, longitude: 27.645778, description: 'Символ Минска' }
+            { name: 'Площадь Независимости', address: 'Минск, площадь Независимости', category: 'Площадь', latitude: 53.893009, longitude: 27.567444, description: 'Главная площадь Минска', image_url: null },
+            { name: 'Национальная библиотека Беларуси', address: 'Минск, проспект Независимости, 116', category: 'Библиотека', latitude: 53.931333, longitude: 27.645778, description: 'Символ Минска', image_url: null }
         ],
         'Гродно': [
-            { name: 'Старый замок', address: 'Гродно, Замковая улица', category: 'Замок', latitude: 53.677500, longitude: 23.831111, description: 'Королевский замок' }
+            { name: 'Старый замок', address: 'Гродно, Замковая улица', category: 'Замок', latitude: 53.677500, longitude: 23.831111, description: 'Королевский замок', image_url: null }
         ],
         'Брест': [
-            { name: 'Брестская крепость', address: 'Брест, ул. Героев обороны', category: 'Крепость', latitude: 52.083333, longitude: 23.653333, description: 'Крепость-герой' }
+            { name: 'Брестская крепость', address: 'Брест, ул. Героев обороны', category: 'Крепость', latitude: 52.083333, longitude: 23.653333, description: 'Крепость-герой', image_url: null }
         ],
         'Витебск': [
-            { name: 'Успенский собор', address: 'Витебск, ул. Крылова', category: 'Собор', latitude: 55.1950, longitude: 30.2047, description: 'Главный собор города' }
+            { name: 'Успенский собор', address: 'Витебск, ул. Крылова', category: 'Собор', latitude: 55.1950, longitude: 30.2047, description: 'Главный собор города', image_url: null }
         ],
         'Могилев': [
-            { name: 'Площадь Звезд', address: 'Могилев, площадь Звезд', category: 'Площадь', latitude: 53.9167, longitude: 30.3333, description: 'Главная площадь Могилева' }
+            { name: 'Площадь Звезд', address: 'Могилев, площадь Звезд', category: 'Площадь', latitude: 53.9167, longitude: 30.3333, description: 'Главная площадь Могилева', image_url: null }
         ]
     };
     
-    if (cityName && popularPlaces[cityName]) {
-        return popularPlaces[cityName];
-    }
-    return popularPlaces['Минск'];
+    const places = (cityName && popularPlaces[cityName]) ? popularPlaces[cityName] : popularPlaces['Минск'];
+    
+    // Получаем изображения для популярных мест
+    return Promise.all(
+        places.map(async (place) => {
+            const imageUrl = await getImageForPlace(place.name, place.category);
+            return {
+                ...place,
+                image_url: imageUrl
+            };
+        })
+    );
 }
 
-module.exports = { getPlacesNearby, searchPlacesByCity, getPopularPlaces };
+async function getNearestPort(lat, lon, radius = 50000) {
+    try {
+        // Поиск ближайших портов/марин через Overpass
+        const latMin = lat - (radius / 90000);
+        const latMax = lat + (radius / 90000);
+        const lonMin = lon - (radius / (90000 * Math.cos(lat * Math.PI / 180)));
+        const lonMax = lon + (radius / (90000 * Math.cos(lat * Math.PI / 180)));
+        const query = `
+            [out:json][timeout:25];
+            (
+                node["harbour"](${latMin},${lonMin},${latMax},${lonMax});
+                node["seamark:type"="harbour"](${latMin},${lonMin},${latMax},${lonMax});
+                node["man_made"="pier"](${latMin},${lonMin},${latMax},${lonMax});
+                node["port"](${latMin},${lonMin},${latMax},${lonMax});
+                way["harbour"](${latMin},${lonMin},${latMax},${lonMax});
+                relation["harbour"](${latMin},${lonMin},${latMax},${lonMax});
+            );
+            out center;
+        `;
+        const resp = await axios.post('https://overpass-api.de/api/interpreter', `data=${encodeURIComponent(query)}`, {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            timeout: 10000
+        });
+
+        const elements = resp.data.elements || [];
+        if (elements.length === 0) return null;
+
+        // Compute nearest
+        let best = null;
+        for (const el of elements) {
+            const elLat = el.lat || (el.center && el.center.lat);
+            const elLon = el.lon || (el.center && el.center.lon);
+            if (!elLat || !elLon) continue;
+            const d = Math.sqrt(Math.pow(elLat - lat, 2) + Math.pow(elLon - lon, 2));
+            if (!best || d < best.dist) {
+                best = { element: el, dist: d, latitude: elLat, longitude: elLon };
+            }
+        }
+
+        if (!best) return null;
+
+        const name = best.element.tags && (best.element.tags.name || best.element.tags['name:en'] || best.element.tags['name:ru']) || 'Порт/Марина';
+        return {
+            name,
+            latitude: best.latitude,
+            longitude: best.longitude
+        };
+    } catch (error) {
+        console.error('Error finding nearest port:', error.message);
+        return null;
+    }
+}
+
+module.exports = { getPlacesNearby, searchPlacesByCity, getPopularPlaces, getNearestPort };

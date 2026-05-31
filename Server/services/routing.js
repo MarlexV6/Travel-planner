@@ -76,7 +76,11 @@ async function checkFlightAvailability(startLat, startLon, endLat, endLon) {
                 duration_hours: (flightDuration / 3600).toFixed(1),
                 mode: 'flight',
                 mode_name: 'Самолет',
-                from_airport: nearestAirport.name,
+                airport: {
+                    name: nearestAirport.name,
+                    latitude: nearestAirport.lat,
+                    longitude: nearestAirport.lon
+                },
                 note: 'Примерное время полета'
             };
         }

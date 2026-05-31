@@ -6,7 +6,9 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import Modal from './Modal';
+import PlaceDetailModal from './PlaceDetailModal';
 import '../css/TripMap.css';
+import CityPlacesPicker from './CityPlacesPicker';
 
 delete L.Icon.Default.prototype._getIconUrl;
 
@@ -77,16 +79,38 @@ function TripMap() {
   const [optimizeResult, setOptimizeResult] = useState(null);
   const [nearbyPlaces, setNearbyPlaces] = useState([]);
   const [showPlaces, setShowPlaces] = useState(false);
+  const [portSuggestion, setPortSuggestion] = useState(null);
+  const [showPortSuggestionModal, setShowPortSuggestionModal] = useState(false);
+  const [portsPairSuggestion, setPortsPairSuggestion] = useState(null);
+  const [showPortsPairModal, setShowPortsPairModal] = useState(false);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
   const [selectedCity, setSelectedCity] = useState('');
   const [showAddPlaceModal, setShowAddPlaceModal] = useState(false);
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [addingPlace, setAddingPlace] = useState(false);
+  const [days, setDays] = useState([]);
+  const [selectedDayId, setSelectedDayId] = useState('');
+  const [showSelectDayModal, setShowSelectDayModal] = useState(false);
+  const [pendingAddress, setPendingAddress] = useState('');
 
   useEffect(() => {
     fetchTripDetails();
     fetchPoints();
+    fetchDays();
   }, [id]);
+
+  const fetchDays = async () => {
+    try {
+      const resp = await axios.get(`/api/trips/${id}/days`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setDays(resp.data);
+      if (resp.data.length > 0) setSelectedDayId(resp.data[0].id.toString());
+    } catch (err) {
+      console.error('Error fetching days for TripMap:', err);
+      setDays([]);
+    }
+  };
 
   useEffect(() => {
     if (points.length >= 2) {
@@ -134,6 +158,19 @@ function TripMap() {
         { mode: 'driving' },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      // Handle server suggestion when route impossible
+      if (response.data && response.data.route_possible === false && response.data.suggestion) {
+        const sug = response.data.suggestion;
+        if (sug.type === 'redirect_to_port') {
+          setPortSuggestion(sug.port);
+          if (days.length === 0) await fetchDays();
+          setShowPortSuggestionModal(true);
+        } else if (sug.type === 'redirect_ports_pair') {
+          setPortsPairSuggestion({ origin: sug.origin_port, dest: sug.dest_port });
+          if (days.length === 0) await fetchDays();
+          setShowPortsPairModal(true);
+        }
+      }
       setRoute(response.data);
     } catch (error) {
       console.error('Error fetching route:', error);
@@ -206,40 +243,29 @@ function TripMap() {
   };
 
   const confirmAddPlace = async () => {
+    // Use PlaceDetailModal flow which requires day selection
     if (!selectedPlace) return;
-    
-    setAddingPlace(true);
-    try {
-      const response = await axios.post(`/api/trips/${id}/points`, 
-        {
-          place_name: selectedPlace.name,
-          address: selectedPlace.address || selectedPlace.name,
-          latitude: selectedPlace.latitude,
-          longitude: selectedPlace.longitude,
-          order_index: points.length
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      setPoints([...points, response.data]);
-      setShowAddPlaceModal(false);
-      setSelectedPlace(null);
-    } catch (error) {
-      console.error('Error adding place:', error);
-      alert('Ошибка добавления точки');
-    } finally {
-      setAddingPlace(false);
-    }
+    // open PlaceDetailModal instead
+    // reuse PlaceDetailModal by setting selectedPlace and letting it handle day selection
+    // Close current simple modal if any
+    setShowAddPlaceModal(false);
+    // open full detail modal
+    setShowAddPlaceModal(false);
+    setSelectedPlace(selectedPlace);
   };
 
   const showAddPlaceConfirmation = (place) => {
+    // open place detail modal which includes day selector
     setSelectedPlace(place);
-    setShowAddPlaceModal(true);
+    setShowAddPlaceModal(false);
+    // use PlaceDetailModal by toggling selectedPlace
   };
 
   const showAddPointDialog = (lat, lng, defaultName = '') => {
     setPendingPoint({ lat, lng });
     setPointName(defaultName);
+    // ensure days loaded and ask user to choose day in modal
+    if (days.length === 0) fetchDays();
     setShowAddPointModal(true);
   };
 
@@ -273,17 +299,24 @@ function TripMap() {
         address = addressParts.join(', ');
       }
       
+      if (!selectedDayId) {
+        alert('Выберите день поездки');
+        setAddingPoint(false);
+        return;
+      }
+
       const response = await axios.post(`/api/trips/${id}/points`, 
         {
           place_name: pointName,
           address: address,
           latitude: pendingPoint.lat,
           longitude: pendingPoint.lng,
-          order_index: points.length
+          order_index: points.length,
+          day_id: parseInt(selectedDayId)
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       setPoints([...points, response.data]);
       setShowAddPointModal(false);
       setPointName('');
@@ -344,21 +377,106 @@ function TripMap() {
     
     setAddressLoading(true);
     try {
-      const response = await axios.post(`/api/trips/${id}/points`, 
-        {
-          address: addressInput,
-          order_index: points.length
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      setPoints([...points, response.data]);
-      setAddressInput('');
+      // Prompt user to select day for this address
+      setPendingAddress(addressInput);
+      if (days.length === 0) await fetchDays();
+      setShowSelectDayModal(true);
     } catch (error) {
       console.error('Error adding point:', error);
       alert(error.response?.data?.error || 'Ошибка добавления точки');
     } finally {
       setAddressLoading(false);
+    }
+  };
+
+  const confirmAddAddressPoint = async () => {
+    if (!pendingAddress) return;
+    if (!selectedDayId) {
+      alert('Выберите день поездки');
+      return;
+    }
+    try {
+      const response = await axios.post(`/api/trips/${id}/points`, 
+        {
+          address: pendingAddress,
+          order_index: points.length,
+          day_id: parseInt(selectedDayId)
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (response.data && response.data.ambiguous) {
+        // server returned suggestions for ambiguous address
+        setNearbyPlaces(response.data.suggestions || []);
+        setShowPlaces(true);
+        setShowSelectDayModal(false);
+      } else {
+        setPoints([...points, response.data]);
+        setPendingAddress('');
+        setShowSelectDayModal(false);
+        setAddressInput('');
+      }
+    } catch (err) {
+      console.error('Error adding address point:', err);
+      alert(err.response?.data?.error || 'Ошибка добавления точки');
+    }
+  };
+
+  const confirmAddPort = async () => {
+    if (!portSuggestion) return;
+    if (!selectedDayId) {
+      alert('Выберите день поездки');
+      return;
+    }
+    try {
+      const response = await axios.post(`/api/trips/${id}/points`, {
+        place_name: `Порт: ${portSuggestion.name}`,
+        address: portSuggestion.name,
+        latitude: portSuggestion.latitude,
+        longitude: portSuggestion.longitude,
+        order_index: points.length,
+        day_id: parseInt(selectedDayId)
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      setPoints([...points, response.data]);
+      setShowPortSuggestionModal(false);
+      setPortSuggestion(null);
+      await fetchRoute();
+    } catch (err) {
+      console.error('Error adding port point:', err);
+      alert('Ошибка добавления порта');
+    }
+  };
+
+  const confirmAddPortsPair = async (originDayId, destDayId) => {
+    if (!portsPairSuggestion) return;
+    try {
+      // Add origin port
+      const resp1 = await axios.post(`/api/trips/${id}/points`, {
+        place_name: `Порт: ${portsPairSuggestion.origin.name}`,
+        address: portsPairSuggestion.origin.name,
+        latitude: portsPairSuggestion.origin.latitude,
+        longitude: portsPairSuggestion.origin.longitude,
+        order_index: points.length,
+        day_id: originDayId ? parseInt(originDayId) : null
+      }, { headers: { Authorization: `Bearer ${token}` } });
+
+      // Add dest port
+      const resp2 = await axios.post(`/api/trips/${id}/points`, {
+        place_name: `Порт: ${portsPairSuggestion.dest.name}`,
+        address: portsPairSuggestion.dest.name,
+        latitude: portsPairSuggestion.dest.latitude,
+        longitude: portsPairSuggestion.dest.longitude,
+        order_index: points.length + 1,
+        day_id: destDayId ? parseInt(destDayId) : null
+      }, { headers: { Authorization: `Bearer ${token}` } });
+
+      setPoints([...points, resp1.data, resp2.data]);
+      setShowPortsPairModal(false);
+      setPortsPairSuggestion(null);
+      await fetchRoute();
+    } catch (err) {
+      console.error('Error adding ports pair:', err);
+      alert('Ошибка добавления портов');
     }
   };
 
@@ -404,19 +522,9 @@ function TripMap() {
       </div>
 
       <div className="tm-add-form">
-        <form onSubmit={addPointByAddress} className="tm-address-form">
-          <input
-            type="text"
-            placeholder="Введите адрес (например: Минск, Свердлова)"
-            value={addressInput}
-            onChange={(e) => setAddressInput(e.target.value)}
-            className="tm-address-input"
-            disabled={addressLoading}
-          />
-          <button type="submit" className="tm-add-button" disabled={addressLoading}>
-            {addressLoading ? 'Поиск...' : 'Добавить по адресу'}
-          </button>
-        </form>
+        <div className="tm-add-form">
+          <CityPlacesPicker tripId={id} onPointsAdded={fetchPoints} />
+        </div>
         <div className="tm-hint">
           Кликните на карту, чтобы добавить точку в выбранном месте
         </div>
@@ -598,6 +706,14 @@ function TripMap() {
         inputPlaceholder="Введите название места"
       >
         <p>Выберите название для добавляемой точки:</p>
+        <div style={{ marginTop: 8 }}>
+          <label>Выберите день поездки:</label>
+          <select value={selectedDayId} onChange={(e) => setSelectedDayId(e.target.value)} className="modal-input">
+            {days.map(day => (
+              <option key={day.id} value={day.id}>День {day.day_number} ({new Date(day.date).toLocaleDateString('ru-RU')})</option>
+            ))}
+          </select>
+        </div>
       </Modal>
 
       {/* Модальное окно для добавления достопримечательности */}
@@ -624,6 +740,89 @@ function TripMap() {
           </div>
         )}
         {addingPlace && <div className="adding-place-loader">Добавление...</div>}
+      </Modal>
+
+      {/* Полная карточка места с выбором дня */}
+      <PlaceDetailModal
+        isOpen={!!selectedPlace}
+        onClose={() => { setSelectedPlace(null); }}
+        place={selectedPlace}
+        tripId={id}
+        onPointAdded={() => { fetchPoints(); setSelectedPlace(null); }}
+      />
+
+      {/* Модал выбора дня для добавления точки по адресу */}
+      <Modal
+        isOpen={showSelectDayModal}
+        onClose={() => setShowSelectDayModal(false)}
+        onConfirm={confirmAddAddressPoint}
+        title="Выберите день поездки"
+        type="confirm"
+        confirmText="Добавить"
+        cancelText="Отмена"
+      >
+        <p>Добавление адреса: {pendingAddress}</p>
+        <div style={{ marginTop: 8 }}>
+          <select value={selectedDayId} onChange={(e) => setSelectedDayId(e.target.value)} className="modal-input">
+            {days.map(day => (
+              <option key={day.id} value={day.id}>День {day.day_number} ({new Date(day.date).toLocaleDateString('ru-RU')})</option>
+            ))}
+          </select>
+        </div>
+      </Modal>
+
+      {/* Модальное предложение добавить порт для невозможного маршрута */}
+      <Modal
+        isOpen={showPortSuggestionModal}
+        onClose={() => setShowPortSuggestionModal(false)}
+        onConfirm={confirmAddPort}
+        title="Предложение: добавить ближайший порт"
+        type="confirm"
+        confirmText="Добавить порт"
+        cancelText="Отмена"
+      >
+        <p>Маршрут между точками невозможен. Предлагается добавить ближайший порт: {portSuggestion?.name}</p>
+        <div style={{ marginTop: 8 }}>
+          <label>Выберите день для порта:</label>
+          <select value={selectedDayId} onChange={(e) => setSelectedDayId(e.target.value)} className="modal-input">
+            {days.map(day => (
+              <option key={day.id} value={day.id}>День {day.day_number} ({new Date(day.date).toLocaleDateString('ru-RU')})</option>
+            ))}
+          </select>
+        </div>
+      </Modal>
+
+      {/* Модальное предложение добавить пару портов (отправление и прибытие) */}
+      <Modal
+        isOpen={showPortsPairModal}
+        onClose={() => setShowPortsPairModal(false)}
+        onConfirm={() => confirmAddPortsPair(selectedDayId, selectedDayId)}
+        title="Предложение: добавить порты отправления и прибытия"
+        type="confirm"
+        confirmText="Добавить оба порта"
+        cancelText="Отмена"
+      >
+        <p>Маршрут между точками невозможен. Предлагается добавить порты:</p>
+        <div style={{ marginTop: 8 }}>
+          <strong>Отправление:</strong> {portsPairSuggestion?.origin?.name}
+          <div>
+            <label>День для отправления:</label>
+            <select value={selectedDayId} onChange={(e) => setSelectedDayId(e.target.value)} className="modal-input">
+              {days.map(day => (
+                <option key={day.id} value={day.id}>День {day.day_number} ({new Date(day.date).toLocaleDateString('ru-RU')})</option>
+              ))}
+            </select>
+          </div>
+          <strong style={{ marginTop: 8 }}>Прибытие:</strong> {portsPairSuggestion?.dest?.name}
+          <div>
+            <label>День для прибытия:</label>
+            <select value={selectedDayId} onChange={(e) => setSelectedDayId(e.target.value)} className="modal-input">
+              {days.map(day => (
+                <option key={day.id} value={day.id}>День {day.day_number} ({new Date(day.date).toLocaleDateString('ru-RU')})</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </Modal>
 
       {/* Модальное окно для подтверждения удаления */}

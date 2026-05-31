@@ -166,6 +166,19 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
 
   const currentDay = days.find(d => d.id === selectedDay);
   const dayPoints = currentDay?.points || [];
+  
+  // Получить последнюю точку из предыдущего дня, если текущий день пустой
+  let lastPointFromPreviousDay = null;
+  if (dayPoints.length === 0 && currentDay) {
+    const currentDayIndex = days.findIndex(d => d.id === selectedDay);
+    if (currentDayIndex > 0) {
+      const previousDay = days[currentDayIndex - 1];
+      const previousDayPoints = previousDay?.points || [];
+      if (previousDayPoints.length > 0) {
+        lastPointFromPreviousDay = previousDayPoints[previousDayPoints.length - 1];
+      }
+    }
+  }
 
   return (
     <div className="day-planner-container">
@@ -201,7 +214,23 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
           
           <div className="day-points-list">
             {dayPoints.length === 0 ? (
-              <p className="no-points">Нет запланированных мест</p>
+              <>
+                {lastPointFromPreviousDay ? (
+                  <div>
+                    <p className="no-points-info">На этот день не запланировано новых мест</p>
+                    <div className="day-point-card last-point-from-previous">
+                      <div className="day-point-number" style={{ color: '#999' }}>↑</div>
+                      <div className="day-point-details">
+                        <strong>{lastPointFromPreviousDay.place_name}</strong>
+                        <span className="day-point-address">{lastPointFromPreviousDay.address}</span>
+                        <span className="day-point-label">(Последняя точка из предыдущего дня)</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="no-points">Нет запланированных мест</p>
+                )}
+              </>
             ) : (
               dayPoints.map((point, idx) => (
                 <div key={point.id} className="day-point-card">

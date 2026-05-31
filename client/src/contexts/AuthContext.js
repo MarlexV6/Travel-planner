@@ -2,7 +2,6 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext();
-const API_URL = window.location.origin + '/api';
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -24,7 +23,6 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         return;
       }
-      
       const response = await axios.get('/api/me', {
         headers: { Authorization: `Bearer ${currentToken}` }
       });
@@ -51,38 +49,37 @@ export const AuthProvider = ({ children }) => {
       },
       (error) => Promise.reject(error)
     );
-
     return () => axios.interceptors.request.eject(interceptor);
   }, []);
 
+  // Слушаем изменения в localStorage (для нескольких вкладок)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const newToken = localStorage.getItem('token');
+      const newUser = localStorage.getItem('user');
+      if (newToken && newUser) {
+        setToken(newToken);
+        setUser(JSON.parse(newUser));
+      } else if (!newToken) {
+        setToken(null);
+        setUser(null);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
-useEffect(() => {
-  const handleStorageChange = () => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    if (token && user) {
-      setToken(token);
-      setUser(JSON.parse(user));
-    }
-  };
-  
-  window.addEventListener('storage', handleStorageChange);
-  return () => window.removeEventListener('storage', handleStorageChange);
-}, []);
-
-
+  // Инициализация аутентификации
   useEffect(() => {
     const initAuth = async () => {
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
-      
       if (storedToken && storedUser) {
         setToken(storedToken);
         try {
           const userData = JSON.parse(storedUser);
           setUser(userData);
-          // Проверяем валидность токена
-          await fetchUser();
+          await fetchUser(); // проверка валидности токена
         } catch (e) {
           console.error('Error parsing user data:', e);
           localStorage.removeItem('token');
@@ -93,13 +90,12 @@ useEffect(() => {
       }
       setLoading(false);
     };
-    
     initAuth();
   }, []);
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post(`${API_URL}/auth/login`, { email, password });
+      const response = await axios.post('/api/auth/login', { email, password });
       const { token, user } = response.data;
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
@@ -135,6 +131,11 @@ useEffect(() => {
     await fetchUser();
   };
 
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
   const value = {
     user,
     loading,
@@ -143,6 +144,7 @@ useEffect(() => {
     register,
     logout,
     refreshUser,
+    updateUser,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin'
   };

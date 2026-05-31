@@ -3,6 +3,8 @@ const prisma = require('../config/database');
 const { authenticateToken } = require('../middleware/auth');
 const { geocodeAddress } = require('../services/geocoding');
 const { optimizeRoute, calculateTotalDistance } = require('../services/routeOptimizer');
+const routing = require('../services/routing');
+const { getNearestPort } = require('../services/placesService');
 const axios = require('axios');
 
 const router = express.Router();
@@ -508,26 +510,117 @@ router.post('/:tripId/route', authenticateToken, async (req, res) => {
             });
         }
         
-        const coordinates = points.map(p => `${p.longitude},${p.latitude}`).join(';');
-        const url = `https://router.project-osrm.org/route/v1/driving/${coordinates}`;
-        
-        const response = await axios.get(url, {
-            params: { overview: 'full', geometries: 'polyline' }
-        });
-        
-        if (response.data && response.data.routes && response.data.routes.length > 0) {
-            const route = response.data.routes[0];
-            const decodedPath = decodePolyline(route.geometry);
-            
-            res.json({
-                polyline: decodedPath,
-                distance: (route.distance / 1000).toFixed(1),
-                duration: (route.duration / 3600).toFixed(1)
-            });
-        } else {
-            const directPath = points.map(p => ({ lat: parseFloat(p.latitude), lng: parseFloat(p.longitude) }));
-            res.json({ polyline: directPath, distance: null, duration: null });
+        // Build route segment by segment to detect impossible segments
+        const fullPolyline = [];
+        let totalDistance = 0;
+        let totalDuration = 0;
+
+        for (let i = 0; i < points.length - 1; i++) {
+            const a = points[i];
+            const b = points[i+1];
+            const startLat = parseFloat(a.latitude);
+            const startLon = parseFloat(a.longitude);
+            const endLat = parseFloat(b.latitude);
+            const endLon = parseFloat(b.longitude);
+
+            // Try driving route first
+            let segmentRoute = null;
+            try {
+                segmentRoute = await routing.getRoute(startLat, startLon, endLat, endLon, 'driving');
+            } catch (e) {
+                segmentRoute = null;
+            }
+
+            if (!segmentRoute) {
+                // Try multimodal options (ferry/flight)
+                try {
+                    const multi = await routing.getMultiModalRoute(startLat, startLon, endLat, endLon);
+                    if (multi && multi.length > 0) {
+                        segmentRoute = multi[0];
+                    }
+                } catch (e) {
+                    segmentRoute = null;
+                }
+            }
+
+            if (!segmentRoute) {
+                // No route found - first try to suggest flight (nearest airport), then water port
+                try {
+                    const flightSuggestion = await routing.checkFlightAvailability(startLat, startLon, endLat, endLon);
+                    if (flightSuggestion && flightSuggestion.available && flightSuggestion.airport) {
+                        return res.json({
+                            route_possible: false,
+                            suggestion: {
+                                type: 'redirect_to_airport',
+                                segment_index: i,
+                                airport: flightSuggestion.airport,
+                                message: 'Нет дорожного маршрута. Предлагается доставить пассажиров к ближайшему аэропорту.'
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.error('Flight suggestion error:', e.message);
+                }
+
+                // Suggest nearest ports (origin and destination)
+                const originPort = await getNearestPort(startLat, startLon);
+                const destPort = await getNearestPort(endLat, endLon);
+                if (originPort && destPort) {
+                    return res.json({
+                        route_possible: false,
+                        suggestion: {
+                            type: 'redirect_ports_pair',
+                            segment_index: i,
+                            origin_port: originPort,
+                            dest_port: destPort,
+                            message: 'Не удалось проложить дорожный маршрут. Предлагается перенаправление к ближайшим портам (отправление и прибытие).'
+                        }
+                    });
+                }
+
+                // If only dest port found, suggest it
+                const nearestPort = destPort;
+                if (nearestPort) {
+                    return res.json({
+                        route_possible: false,
+                        suggestion: {
+                            type: 'redirect_to_port',
+                            segment_index: i,
+                            port: nearestPort,
+                            message: 'Не удалось проложить дорожный маршрут между точками. Предлагается перенаправление к ближайшему порту.'
+                        }
+                    });
+                }
+
+                // If no port found - return direct coordinates as fallback
+                const directPath = points.map(p => ({ lat: parseFloat(p.latitude), lng: parseFloat(p.longitude) }));
+                return res.json({ polyline: directPath, distance: null, duration: null, route_possible: false });
+            }
+
+            // Append segment geometry
+            if (segmentRoute.geometry) {
+                try {
+                    const coords = decodePolyline(segmentRoute.geometry);
+                    fullPolyline.push(...coords);
+                } catch (e) {
+                    // ignore decode errors
+                }
+            } else if (segmentRoute.steps) {
+                // if multimodal returns steps or location info, approximate by endpoints
+                fullPolyline.push({ lat: startLat, lng: startLon });
+                fullPolyline.push({ lat: endLat, lng: endLon });
+            }
+
+            if (segmentRoute.distance) totalDistance += segmentRoute.distance;
+            if (segmentRoute.duration) totalDuration += segmentRoute.duration;
         }
+
+        res.json({
+            polyline: fullPolyline,
+            distance: totalDistance ? totalDistance.toFixed(1) : null,
+            duration: totalDuration ? (totalDuration / 3600).toFixed(1) : null,
+            route_possible: true
+        });
     } catch (error) {
         console.error('Route error:', error);
         res.status(500).json({ error: error.message });
@@ -551,7 +644,7 @@ router.get('/:tripId/points', authenticateToken, async (req, res) => {
 router.post('/:tripId/points', authenticateToken, async (req, res) => {
     try {
         const tripId = parseInt(req.params.tripId);
-        let { place_name, address, latitude, longitude, order_index } = req.body;
+        let { place_name, address, latitude, longitude, order_index, day_id } = req.body;
         
         console.log('Adding point request:', { place_name, address, latitude, longitude });
         
@@ -569,6 +662,21 @@ router.post('/:tripId/points', authenticateToken, async (req, res) => {
                 return res.status(400).json({ error: 'Не удалось определить координаты по указанному адресу' });
             }
         }
+
+        // If geocoded but vague (country or low confidence) - offer suggestions
+        if (address && (!place_name || place_name.toLowerCase() === address.toLowerCase())) {
+            // try to fetch suggestions by city
+            try {
+                const { searchPlacesByCity } = require('../services/placesService');
+                const cityName = address.split(',')[0];
+                const suggestions = await searchPlacesByCity(cityName);
+                if (suggestions && suggestions.length > 0) {
+                    return res.status(200).json({ ambiguous: true, suggestions });
+                }
+            } catch (e) {
+                console.error('Suggestion lookup error:', e.message);
+            }
+        }
         
         if (!latitude || !longitude) {
             return res.status(400).json({ error: 'Необходимо указать координаты или адрес' });
@@ -581,15 +689,26 @@ router.post('/:tripId/points', authenticateToken, async (req, res) => {
             finalAddress = '';
         }
         
+
+        if (day_id) {
+        const day = await prisma.tripDay.findFirst({
+            where: { id: parseInt(day_id), trip_id: tripId }
+        });
+        if (!day) {
+            return res.status(400).json({ error: 'Указанный день не принадлежит этой поездке' });
+        }
+        }
+
         const point = await prisma.tripPoint.create({
-            data: {
-                trip_id: tripId,
-                place_name: finalPlaceName,
-                address: finalAddress || null,
-                latitude: parseFloat(latitude),
-                longitude: parseFloat(longitude),
-                order_index: order_index || 0
-            }
+        data: {
+            trip_id: tripId,
+            place_name: finalPlaceName,
+            address: finalAddress || null,
+            latitude: parseFloat(latitude),
+            longitude: parseFloat(longitude),
+            order_index: order_index || 0,
+            day_id: day_id ? parseInt(day_id) : null
+        }
         });
         
         console.log('Point created:', { id: point.id, name: point.place_name });
