@@ -3,7 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-
+const aiPlacesRouter = require('./routes/aiPlaces');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const tripRoutes = require('./routes/trips');
@@ -32,6 +32,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/ai-places', aiPlacesRouter);
 app.get('/api/me', authenticateToken, (req, res) => {
     res.json(req.user);
 });

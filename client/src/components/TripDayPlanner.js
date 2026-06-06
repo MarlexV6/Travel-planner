@@ -7,31 +7,58 @@ import '../css/TripDayPlanner.css';
 function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
   const { token } = useAuth();
   const [days, setDays] = useState([]);
-  const [points, setPoints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState(null);
   const [showDistributeModal, setShowDistributeModal] = useState(false);
   const [unassignedPoints, setUnassignedPoints] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [pointToDelete, setPointToDelete] = useState(null);
-  const [newPoint, setNewPoint] = useState({
-    address: ''
-  });
+  const [newPoint, setNewPoint] = useState({ address: '' });
   const [addingPoint, setAddingPoint] = useState(false);
+
+  useEffect(() => {
+    initDaysAndPoints();
+  }, [tripId, startDate, endDate]);
+
+  const initDaysAndPoints = async () => {
+    setLoading(true);
+    await fetchDays();
+    await fetchPoints();
+    setLoading(false);
+  };
 
   const fetchDays = async () => {
     try {
       const response = await axios.get(`/api/trips/${tripId}/days`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setDays(response.data);
-      if (response.data.length > 0 && !selectedDay) {
-        setSelectedDay(response.data[0].id);
+      let daysData = response.data;
+      if (daysData.length === 0 && startDate && endDate) {
+        // Автоматическая генерация дней
+        await generateDays();
+        const newResponse = await axios.get(`/api/trips/${tripId}/days`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        daysData = newResponse.data;
       }
-      return true;
+      setDays(daysData);
+      if (daysData.length > 0 && !selectedDay) {
+        setSelectedDay(daysData[0].id);
+      }
     } catch (error) {
       console.error('Error fetching days:', error);
-      return false;
+    }
+  };
+
+  const generateDays = async () => {
+    try {
+      await axios.post(`/api/trips/${tripId}/days/generate`, 
+        { start_date: startDate, end_date: endDate },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (error) {
+      console.error('Error generating days:', error);
+      alert('Ошибка генерации дней');
     }
   };
 
@@ -40,42 +67,12 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
       const response = await axios.get(`/api/trips/${tripId}/points`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setPoints(response.data);
-      
-      const unassigned = response.data.filter(p => !p.day_id);
+      const allPoints = response.data;
+      const unassigned = allPoints.filter(p => !p.day_id);
       setUnassignedPoints(unassigned);
-      
-      if (onPointsUpdate) {
-        onPointsUpdate(response.data);
-      }
-      return true;
+      if (onPointsUpdate) onPointsUpdate(allPoints);
     } catch (error) {
       console.error('Error fetching points:', error);
-      return false;
-    }
-  };
-
-  const fetchAllData = async () => {
-    setLoading(true);
-    await fetchDays();
-    await fetchPoints();
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchAllData();
-  }, [tripId]);
-
-  const generateDays = async () => {
-    try {
-      await axios.post(`/api/trips/${tripId}/days/generate`, 
-        { start_date: startDate, end_date: endDate },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      await fetchAllData();
-    } catch (error) {
-      console.error('Error generating days:', error);
-      alert('Ошибка генерации дней');
     }
   };
 
@@ -85,7 +82,8 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
         { day_id: dayId },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      await fetchAllData();
+      await fetchDays();
+      await fetchPoints();
       setShowDistributeModal(false);
     } catch (error) {
       console.error('Error distributing point:', error);
@@ -99,7 +97,6 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
       alert('Введите адрес места');
       return;
     }
-    
     setAddingPoint(true);
     try {
       await axios.post(`/api/trips/${tripId}/days/${selectedDay}/points`, 
@@ -107,12 +104,27 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setNewPoint({ address: '' });
-      await fetchAllData();
+      await fetchDays();
+      await fetchPoints();
     } catch (error) {
       console.error('Error adding point:', error);
       alert('Ошибка добавления точки');
     } finally {
       setAddingPoint(false);
+    }
+  };
+
+  const removePointFromDay = async (pointId) => {
+    try {
+      await axios.put(`/api/trips/points/${pointId}/unassign`, 
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await fetchDays();
+      await fetchPoints();
+    } catch (error) {
+      console.error('Error removing point from day:', error);
+      alert('Ошибка удаления точки из дня');
     }
   };
 
@@ -124,7 +136,8 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
         });
         setShowDeleteModal(false);
         setPointToDelete(null);
-        await fetchAllData();
+        await fetchDays();
+        await fetchPoints();
       } catch (error) {
         console.error('Error deleting point:', error);
         alert('Ошибка удаления точки');
@@ -132,68 +145,23 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
     }
   };
 
-  const removePointFromDay = async (pointId) => {
-    try {
-      await axios.put(`/api/trips/points/${pointId}/unassign`, 
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      await fetchAllData();
-    } catch (error) {
-      console.error('Error removing point from day:', error);
-      alert('Ошибка удаления точки из дня');
-    }
-  };
-
-  if (loading) {
-    return <div className="day-planner-loading">Загрузка планировщика...</div>;
-  }
-
-  if (days.length === 0) {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const daysCount = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
-    return (
-      <div className="day-planner-empty">
-        <h3>Планирование по дням</h3>
-        <p>Поездка длится {daysCount} дней</p>
-        <button onClick={generateDays} className="btn-generate-days">
-          Сгенерировать дни поездки
-        </button>
-      </div>
-    );
-  }
+  if (loading) return <div className="day-planner-loading">Загрузка планировщика...</div>;
+  if (days.length === 0) return <div className="day-planner-empty">Нет сгенерированных дней</div>;
 
   const currentDay = days.find(d => d.id === selectedDay);
   const dayPoints = currentDay?.points || [];
-  
-  // Получить последнюю точку из предыдущего дня, если текущий день пустой
-  let lastPointFromPreviousDay = null;
-  if (dayPoints.length === 0 && currentDay) {
-    const currentDayIndex = days.findIndex(d => d.id === selectedDay);
-    if (currentDayIndex > 0) {
-      const previousDay = days[currentDayIndex - 1];
-      const previousDayPoints = previousDay?.points || [];
-      if (previousDayPoints.length > 0) {
-        lastPointFromPreviousDay = previousDayPoints[previousDayPoints.length - 1];
-      }
-    }
-  }
 
   return (
     <div className="day-planner-container">
       <div className="day-planner-header">
         <h3>Планирование по дням</h3>
         {unassignedPoints.length > 0 && (
-          <button 
-            onClick={() => setShowDistributeModal(true)} 
-            className="btn-distribute"
-          >
+          <button onClick={() => setShowDistributeModal(true)} className="btn-distribute">
             Распределить точки ({unassignedPoints.length})
           </button>
         )}
       </div>
-      
+
       <div className="day-navigation">
         {days.map(day => (
           <button
@@ -211,26 +179,9 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
       {selectedDay && currentDay && (
         <div className="day-content">
           <h4>{currentDay.title || `День ${currentDay.day_number}`}</h4>
-          
           <div className="day-points-list">
             {dayPoints.length === 0 ? (
-              <>
-                {lastPointFromPreviousDay ? (
-                  <div>
-                    <p className="no-points-info">На этот день не запланировано новых мест</p>
-                    <div className="day-point-card last-point-from-previous">
-                      <div className="day-point-number" style={{ color: '#999' }}>↑</div>
-                      <div className="day-point-details">
-                        <strong>{lastPointFromPreviousDay.place_name}</strong>
-                        <span className="day-point-address">{lastPointFromPreviousDay.address}</span>
-                        <span className="day-point-label">(Последняя точка из предыдущего дня)</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="no-points">Нет запланированных мест</p>
-                )}
-              </>
+              <p className="no-points">Нет запланированных мест</p>
             ) : (
               dayPoints.map((point, idx) => (
                 <div key={point.id} className="day-point-card">
@@ -240,23 +191,8 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
                     <span className="day-point-address">{point.address}</span>
                   </div>
                   <div className="day-point-actions">
-                    <button 
-                      onClick={() => removePointFromDay(point.id)}
-                      className="day-point-remove"
-                      title="Убрать из дня"
-                    >
-                      Убрать
-                    </button>
-                    <button 
-                      onClick={() => {
-                        setPointToDelete(point);
-                        setShowDeleteModal(true);
-                      }}
-                      className="day-point-delete"
-                      title="Удалить точку"
-                    >
-                      Удалить
-                    </button>
+                    <button onClick={() => removePointFromDay(point.id)} className="day-point-remove" title="Убрать из дня">Убрать</button>
+                    <button onClick={() => { setPointToDelete(point); setShowDeleteModal(true); }} className="day-point-delete" title="Удалить точку">Удалить</button>
                   </div>
                 </div>
               ))
@@ -264,20 +200,20 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
           </div>
 
           <form onSubmit={addPointToDay} className="add-day-point-form">
-            <h5>Добавить новое место</h5>
+            <h5>Добавить новое место в этот день</h5>
             <div className="form-row">
               <input
                 type="text"
-                placeholder="Введите адрес *"
+                placeholder="Введите адрес"
                 value={newPoint.address}
                 onChange={(e) => setNewPoint({ address: e.target.value })}
                 required
                 className="form-input"
               />
+              <button type="submit" disabled={addingPoint} className="btn-add-day-point">
+                {addingPoint ? 'Добавление...' : 'Добавить место'}
+              </button>
             </div>
-            <button type="submit" disabled={addingPoint} className="btn-add-day-point">
-              {addingPoint ? 'Добавление...' : 'Добавить место'}
-            </button>
           </form>
         </div>
       )}
@@ -297,11 +233,9 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
                 <strong>{point.place_name}</strong>
                 <span className="distribute-point-address">{point.address}</span>
               </div>
-              <select 
+              <select
                 onChange={(e) => {
-                  if (e.target.value) {
-                    distributePointToDay(point.id, parseInt(e.target.value));
-                  }
+                  if (e.target.value) distributePointToDay(point.id, parseInt(e.target.value));
                 }}
                 className="distribute-select"
                 defaultValue=""
