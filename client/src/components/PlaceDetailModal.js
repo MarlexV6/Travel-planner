@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import Modal from './Modal';
 import '../css/Modal.css';
 
 function PlaceDetailModal({ isOpen, onClose, place, tripId, onPointAdded }) {
@@ -9,6 +10,7 @@ function PlaceDetailModal({ isOpen, onClose, place, tripId, onPointAdded }) {
   const [selectedDayId, setSelectedDayId] = useState('');
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [alertMessage, setAlertMessage] = useState(null);
 
   useEffect(() => {
     if (isOpen && tripId) {
@@ -35,7 +37,7 @@ function PlaceDetailModal({ isOpen, onClose, place, tripId, onPointAdded }) {
 
   const handleAddPoint = async () => {
     if (!selectedDayId) {
-      alert('Выберите день поездки');
+      setAlertMessage('Выберите день поездки');
       return;
     }
     setAdding(true);
@@ -54,7 +56,7 @@ function PlaceDetailModal({ isOpen, onClose, place, tripId, onPointAdded }) {
       onClose();
     } catch (error) {
       console.error('Error adding point:', error);
-      alert('Ошибка добавления точки');
+      setAlertMessage('Ошибка добавления точки');
     } finally {
       setAdding(false);
     }
@@ -105,6 +107,14 @@ function PlaceDetailModal({ isOpen, onClose, place, tripId, onPointAdded }) {
           </button>
           <button onClick={onClose} className="modal-button-cancel">Отмена</button>
         </div>
+
+        <Modal
+          isOpen={!!alertMessage}
+          onClose={() => setAlertMessage(null)}
+          title="Уведомление"
+          message={alertMessage}
+          type="info"
+        />
       </div>
     </div>
   );

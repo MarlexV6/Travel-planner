@@ -4,6 +4,7 @@
   border-radius: 12px;
   padding: 16px;
   border: 1px solid #30363d;
+  margin-bottom: 20px;
 }
 .city-input-group {
   display: flex;
@@ -66,4 +67,12 @@
 }
 .error {
   color: #f85149;
+}
+
+/* Hotels styling for discovery (req #3) */
+.hotel-card {
+  border-left: 4px solid #56d364;
+}
+.hotel-card .place-info strong {
+  color: #56d364;
 }

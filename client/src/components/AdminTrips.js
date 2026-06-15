@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Modal from './Modal';
 import '../css/AdminTrips.css';
 
 function AdminTrips() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
+  const [alertMessage, setAlertMessage] = useState(null);
   const { token } = useAuth();
 
   useEffect(() => {
@@ -36,7 +38,7 @@ function AdminTrips() {
         fetchAllTrips();
       } catch (error) {
         console.error('Error deleting trip:', error);
-        alert('Ошибка удаления поездки');
+        setAlertMessage('Ошибка удаления поездки');
       }
     }
   };
@@ -96,6 +98,14 @@ function AdminTrips() {
           <p>Нет поездок, соответствующих поиску</p>
         </div>
       )}
+
+      <Modal
+        isOpen={!!alertMessage}
+        onClose={() => setAlertMessage(null)}
+        title="Уведомление"
+        message={alertMessage}
+        type="info"
+      />
     </div>
   );
 }

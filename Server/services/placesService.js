@@ -1,12 +1,12 @@
 const axios = require('axios');
 
-// Получить картинку для достопримечательности с таймаутом
+
 async function getImageForPlace(placeName, category) {
     try {
-        // Используем Promise.race с таймаутом для предотвращения зависаний
+
         const imagePromise = getImageFromWikipedia(placeName);
         const timeoutPromise = new Promise((resolve) => 
-            setTimeout(() => resolve(null), 3000)  // 3 секунды таймаут
+            setTimeout(() => resolve(null), 3000)  
         );
         
         return await Promise.race([imagePromise, timeoutPromise]);
@@ -18,7 +18,7 @@ async function getImageForPlace(placeName, category) {
 
 async function getImageFromWikipedia(placeName) {
     try {
-        // Пытаемся получить изображение с Wikimedia Commons через Wikipedia API
+
         const searchResponse = await axios.get('https://en.wikipedia.org/w/api.php', {
             params: {
                 action: 'query',
@@ -38,14 +38,14 @@ async function getImageFromWikipedia(placeName) {
             }
         }
 
-        // Если нет, пытаемся найти через Wikimedia Commons
+
         const commonsResponse = await axios.get('https://commons.wikimedia.org/w/api.php', {
             params: {
                 action: 'query',
                 format: 'json',
                 list: 'search',
                 srsearch: placeName,
-                srnamespace: '6', // File namespace
+                srnamespace: '6', 
                 srlimit: 1,
                 origin: '*'
             },
@@ -91,19 +91,19 @@ async function getPlacesNearby(lat, lng, radius = 5000) {
         const lonMin = lng - (radius / (90000 * Math.cos(lat * Math.PI / 180)));
         const lonMax = lng + (radius / (90000 * Math.cos(lat * Math.PI / 180)));
         const overpassQuery = `
-            [out:json][timeout:30];
+            [out:json][timeout:45];
             (
-                node["tourism"](${latMin},${lonMin},${latMax},${lonMax});
-                node["historic"](${latMin},${lonMin},${latMax},${lonMax});
-                node["leisure"~"park|garden|nature_reserve"](${latMin},${lonMin},${latMax},${lonMax});
-                node["amenity"~"cinema|theatre|library|fountain|viewpoint|museum|artwork"](${latMin},${lonMin},${latMax},${lonMax});
-                node["man_made"~"tower|lighthouse|windmill"](${latMin},${lonMin},${latMax},${lonMax});
-                node["natural"~"peak|volcano|waterfall|cave|spring"](${latMin},${lonMin},${latMax},${lonMax});
-                way["tourism"](${latMin},${lonMin},${latMax},${lonMax});
-                way["historic"](${latMin},${lonMin},${latMax},${lonMax});
-                way["leisure"~"park|garden"](${latMin},${lonMin},${latMax},${lonMax});
-                relation["tourism"](${latMin},${lonMin},${latMax},${lonMax});
-                relation["historic"](${latMin},${lonMin},${latMax},${lonMax});
+                node["tourism"]["name"](${latMin},${lonMin},${latMax},${lonMax});
+                node["historic"]["name"](${latMin},${lonMin},${latMax},${lonMax});
+                node["leisure"~"park|garden|nature_reserve"]["name"](${latMin},${lonMin},${latMax},${lonMax});
+                node["amenity"~"cinema|theatre|library|fountain|museum|artwork"]["name"](${latMin},${lonMin},${latMax},${lonMax});
+                node["man_made"~"tower|lighthouse|windmill"]["name"](${latMin},${lonMin},${latMax},${lonMax});
+                node["natural"~"peak|volcano|waterfall|cave|spring"]["name"](${latMin},${lonMin},${latMax},${lonMax});
+                way["tourism"]["name"](${latMin},${lonMin},${latMax},${lonMax});
+                way["historic"]["name"](${latMin},${lonMin},${latMax},${lonMax});
+                way["leisure"~"park|garden"]["name"](${latMin},${lonMin},${latMax},${lonMax});
+                relation["tourism"]["name"](${latMin},${lonMin},${latMax},${lonMax});
+                relation["historic"]["name"](${latMin},${lonMin},${latMax},${lonMax});
             );
             out body;
             out skel qt;
@@ -115,10 +115,12 @@ async function getPlacesNearby(lat, lng, radius = 5000) {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'User-Agent': 'TravelPlannerApp/1.0'
                 },
-                timeout: 30000
+                timeout: 45000
             }
         );
         const places = [];
+        const badNameValues = new Set(['information', 'viewpoint', 'attraction', 'tourism', 'historic', 'amenity', 'leisure']);
+        
         if (response.data && response.data.elements) {
             for (const element of response.data.elements) {
                 let lat = element.lat;
@@ -130,7 +132,12 @@ async function getPlacesNearby(lat, lng, radius = 5000) {
                 }
                 if (lat && lon) {
                     const placeInfo = extractPlaceInfo(element);
-                    if (placeInfo.name && placeInfo.name.length > 2) {
+                    const rawName = (element.tags && (element.tags.name || element.tags['name:ru'] || element.tags['name:en'])) || '';
+  
+                    const hasRealName = placeInfo.name && placeInfo.name.length > 2 && !badNameValues.has(placeInfo.name.toLowerCase());
+                    const hasProperNameTag = !!rawName && rawName.length > 2;
+                    
+                    if (hasRealName && hasProperNameTag) {
                         places.push({
                             id: element.id,
                             name: placeInfo.name,
@@ -154,18 +161,8 @@ async function getPlacesNearby(lat, lng, radius = 5000) {
             }
         }
         
-        // Получаем изображения для мест асинхронно
-        const placesWithImages = await Promise.all(
-            uniquePlaces.slice(0, 40).map(async (place) => {
-                const imageUrl = await getImageForPlace(place.name, place.category);
-                return {
-                    ...place,
-                    image_url: imageUrl
-                };
-            })
-        );
-        
-        return placesWithImages;
+
+        return uniquePlaces;
     } catch (error) {
         console.error('Error fetching places:', error.message);
         return [];
@@ -185,7 +182,7 @@ function extractPlaceInfo(element) {
             'aquarium': 'Аквариум',
             'theme_park': 'Парк аттракционов',
             'viewpoint': 'Смотровая площадка',
-            'information': 'Туристический центр'
+            'information': 'Информационный стенд'
         };
         category = tourismMap[tags.tourism] || 'Достопримечательность';
     } else if (tags.historic) {
@@ -207,31 +204,30 @@ function extractPlaceInfo(element) {
         category = 'Театр';
     }
     
-    // Получаем название
+
     let name = tags['name:ru'] || tags.name || tags['name:en'] || null;
-    if (!name && tags.tourism) name = tags.tourism;
-    if (!name && tags.historic) name = tags.historic;
     
-    // Формируем адрес (только город и улица, без названия заведения)
+
     const addressParts = [];
-    if (tags['addr:city']) addressParts.push(tags['addr:city']);
-    else if (tags['addr:town']) addressParts.push(tags['addr:town']);
-    else if (tags['addr:village']) addressParts.push(tags['addr:village']);
+    const addrCity = tags['addr:city'] || tags['addr:town'] || tags['addr:village'] || tags['addr:suburb'];
+    if (addrCity) addressParts.push(addrCity);
     
     if (tags['addr:street'] && !addressParts.includes(tags['addr:street'])) {
         addressParts.push(tags['addr:street']);
     }
-    
     if (tags['addr:housenumber']) {
         addressParts.push(tags['addr:housenumber']);
     }
+
+    if (tags['addr:place'] && !addressParts.includes(tags['addr:place'])) addressParts.push(tags['addr:place']);
     
     let address = addressParts.join(', ');
     if (!address && tags['addr:country']) {
         address = tags['addr:country'];
     }
+
     
-    let description = tags.description || tags['description:ru'] || null;
+    let description = tags.description || tags['description:ru'] || tags['wikipedia'] || null;
     
     return { name, address, category, description };
 }
@@ -290,7 +286,7 @@ function getPopularPlaces(cityName) {
     
     const places = (cityName && popularPlaces[cityName]) ? popularPlaces[cityName] : popularPlaces['Минск'];
     
-    // Получаем изображения для популярных мест
+
     return Promise.all(
         places.map(async (place) => {
             const imageUrl = await getImageForPlace(place.name, place.category);
@@ -304,7 +300,7 @@ function getPopularPlaces(cityName) {
 
 async function getNearestPort(lat, lon, radius = 50000) {
     try {
-        // Поиск ближайших портов/марин через Overpass
+
         const latMin = lat - (radius / 90000);
         const latMax = lat + (radius / 90000);
         const lonMin = lon - (radius / (90000 * Math.cos(lat * Math.PI / 180)));
@@ -329,7 +325,7 @@ async function getNearestPort(lat, lon, radius = 50000) {
         const elements = resp.data.elements || [];
         if (elements.length === 0) return null;
 
-        // Compute nearest
+
         let best = null;
         for (const el of elements) {
             const elLat = el.lat || (el.center && el.center.lat);
@@ -355,4 +351,232 @@ async function getNearestPort(lat, lon, radius = 50000) {
     }
 }
 
-module.exports = { getPlacesNearby, searchPlacesByCity, getPopularPlaces, getNearestPort };
+async function getNearbyHotels(lat, lng, radius = 15000) {
+    try {
+        const latMin = lat - (radius / 90000);
+        const latMax = lat + (radius / 90000);
+        const lonMin = lng - (radius / (90000 * Math.cos(lat * Math.PI / 180)));
+        const lonMax = lng + (radius / (90000 * Math.cos(lat * Math.PI / 180)));
+
+        const overpassQuery = `
+            [out:json][timeout:45];
+            (
+                node["tourism"~"hotel|hostel|guest_house|apartment|chalet|motel"]["name"]( ${latMin},${lonMin},${latMax},${lonMax} );
+                node["amenity"="hotel"]["name"]( ${latMin},${lonMin},${latMax},${lonMax} );
+                node["building"="hotel"]["name"]( ${latMin},${lonMin},${latMax},${lonMax} );
+                way["tourism"~"hotel|hostel|guest_house"]["name"]( ${latMin},${lonMin},${latMax},${lonMax} );
+            );
+            out body;
+            out skel qt;
+        `;
+
+        const response = await axios.post('https://overpass-api.de/api/interpreter',
+            `data=${encodeURIComponent(overpassQuery)}`,
+            {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'User-Agent': 'TravelPlannerApp/1.0'
+                },
+                timeout: 45000
+            }
+        );
+
+        const hotels = [];
+        const elements = (response.data && response.data.elements) || [];
+
+        for (const element of elements) {
+            let hlat = element.lat;
+            let hlon = element.lon;
+            if (!hlat && element.center) {
+                hlat = element.center.lat;
+                hlon = element.center.lon;
+            }
+            if (!hlat || !hlon) continue;
+
+            const tags = element.tags || {};
+            const name = tags['name:ru'] || tags.name || tags['name:en'] || 'Отель';
+            if (!name || name.length < 2) continue;
+
+            const addressParts = [];
+            if (tags['addr:city']) addressParts.push(tags['addr:city']);
+            else if (tags['addr:town']) addressParts.push(tags['addr:town']);
+            if (tags['addr:street']) addressParts.push(tags['addr:street']);
+            if (tags['addr:housenumber']) addressParts.push(tags['addr:housenumber']);
+
+            hotels.push({
+                id: element.id,
+                name,
+                address: addressParts.join(', ') || (tags['addr:city'] || tags['addr:country'] || ''),
+                latitude: hlat,
+                longitude: hlon,
+                category: 'Отель',
+                description: tags.description || tags['description:ru'] || 'Место для проживания'
+            });
+        }
+
+        const unique = [];
+        const seen = new Set();
+        for (const h of hotels) {
+            const key = `${h.name}-${h.latitude.toFixed(3)}-${h.longitude.toFixed(3)}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                unique.push(h);
+            }
+        }
+        return unique.slice(0, 8); 
+    } catch (error) {
+        console.error('Error fetching nearby hotels:', error.message);
+        return [];
+    }
+}
+
+
+async function getTopAttractions(cityNameOrCoords, limit = 10) {
+    try {
+        let lat, lng, cityShort = '';
+
+        if (typeof cityNameOrCoords === 'string') {
+            const geoResponse = await axios.get('https://nominatim.openstreetmap.org/search', {
+                params: {
+                    q: cityNameOrCoords,
+                    format: 'json',
+                    limit: 1,
+                    addressdetails: 1,
+                    'accept-language': 'ru'
+                },
+                headers: { 'User-Agent': 'TravelPlannerApp/1.0' }
+            });
+            if (!geoResponse.data || geoResponse.data.length === 0) return [];
+            const loc = geoResponse.data[0];
+            lat = parseFloat(loc.lat);
+            lng = parseFloat(loc.lon);
+            cityShort = cityNameOrCoords.split(',')[0];
+        } else if (cityNameOrCoords && cityNameOrCoords.lat != null) {
+            lat = parseFloat(cityNameOrCoords.lat);
+            lng = parseFloat(cityNameOrCoords.lng || cityNameOrCoords.lon);
+        } else {
+            return [];
+        }
+
+        const allNearby = await getPlacesNearby(lat, lng, 20000);
+
+
+        let attractions = allNearby.filter(p => {
+            const isNotHotel = !/отель|гостиниц|hotel|hostel|апартамент/i.test((p.category || '') + ' ' + (p.name || ''));
+            return isNotHotel && p.name && p.name.length > 2;
+        });
+
+
+        if (attractions.length < 5) {
+            attractions = allNearby.filter(p => !/отель|гостиниц|hotel|hostel/i.test((p.category||'') + ' ' + (p.name||'')));
+        }
+
+        const top = attractions.slice(0, limit).map(p => ({
+            ...p,
+            address: p.address || cityShort
+        }));
+
+        return top;
+    } catch (error) {
+        console.error('Error getting top attractions:', error.message);
+        return [];
+    }
+}
+
+async function getCityDiscovery(cityName) {
+    try {
+        if (!cityName || !cityName.trim()) return { center: null, attractions: [], hotels: [] };
+
+        const geoResponse = await axios.get('https://nominatim.openstreetmap.org/search', {
+            params: {
+                q: cityName,
+                format: 'json',
+                limit: 1,
+                addressdetails: 1,
+                'accept-language': 'ru'
+            },
+            headers: { 'User-Agent': 'TravelPlannerApp/1.0' }
+        });
+
+        if (!geoResponse.data || geoResponse.data.length === 0) {
+            return { center: null, attractions: [], hotels: [] };
+        }
+
+        const loc = geoResponse.data[0];
+        const lat = parseFloat(loc.lat);
+        const lng = parseFloat(loc.lon);
+        const centerName = loc.address?.city || loc.address?.town || loc.address?.village || cityName.split(',')[0];
+
+        const center = {
+            name: centerName,
+            latitude: lat,
+            longitude: lng,
+            address: loc.display_name || cityName,
+            category: 'Город / Центр'
+        };
+
+
+        const rawNearby = await getPlacesNearby(lat, lng, 30000);
+
+
+        let attractions = rawNearby
+            .filter(p => !/отель|гостиниц|hotel|hostel|апартамент/i.test((p.category || '') + ' ' + (p.name || '')))
+            .slice(0, 10);
+
+        if (attractions.length < 5) {
+            const top = await getTopAttractions({ lat, lng }, 10);
+            const existingNames = new Set(attractions.map(a => a.name.toLowerCase()));
+            for (const t of top) {
+                if (!existingNames.has(t.name.toLowerCase())) {
+                    attractions.push(t);
+                    if (attractions.length >= 10) break;
+                }
+            }
+        }
+
+        const cityShort = centerName || cityName.split(',')[0];
+        attractions = attractions.map(a => ({
+            ...a,
+            address: a.address && a.address.length > 3 ? a.address : cityShort
+        }));
+
+  
+        let hotels = await getNearbyHotels(lat, lng, 20000);
+        if (hotels.length === 0 && rawNearby.length > 0) {
+            hotels = rawNearby
+                .filter(p => /отель|гостиниц|hotel|hostel|апартамент/i.test((p.category || '') + ' ' + (p.name || '')))
+                .slice(0, 8);
+        }
+        hotels = hotels.map(h => ({
+            ...h,
+            address: h.address && h.address.length > 3 ? h.address : cityShort
+        }));
+
+  
+        if (attractions.length === 0 && center) {
+            attractions.push({
+                name: `Центр ${center.name}`,
+                address: center.address || cityShort,
+                latitude: center.latitude,
+                longitude: center.longitude,
+                category: 'Центр города',
+                description: 'Центральная точка / ориентир'
+            });
+        }
+
+        return { center, attractions: attractions.slice(0, 10), hotels };
+    } catch (error) {
+        console.error('Error in getCityDiscovery:', error.message);
+        return { center: null, attractions: [], hotels: [] };
+    }
+}
+
+module.exports = {
+    getPlacesNearby,
+    searchPlacesByCity,
+    getPopularPlaces,
+    getNearestPort,
+    getNearbyHotels,
+    getTopAttractions,
+    getCityDiscovery
+};

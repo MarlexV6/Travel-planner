@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import Modal from './Modal';
@@ -15,6 +15,8 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
   const [pointToDelete, setPointToDelete] = useState(null);
   const [newPoint, setNewPoint] = useState({ address: '' });
   const [addingPoint, setAddingPoint] = useState(false);
+  const [alertMessage, setAlertMessage] = useState(null);
+  const generatingRef = useRef(false); 
 
   useEffect(() => {
     initDaysAndPoints();
@@ -33,13 +35,17 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
         headers: { Authorization: `Bearer ${token}` }
       });
       let daysData = response.data;
-      if (daysData.length === 0 && startDate && endDate) {
-        // Автоматическая генерация дней
+      if (daysData.length === 0 && startDate && endDate && !generatingRef.current) {
+        
+        
+
+        generatingRef.current = true;
         await generateDays();
         const newResponse = await axios.get(`/api/trips/${tripId}/days`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         daysData = newResponse.data;
+        generatingRef.current = false;
       }
       setDays(daysData);
       if (daysData.length > 0 && !selectedDay) {
@@ -58,7 +64,7 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
       );
     } catch (error) {
       console.error('Error generating days:', error);
-      alert('Ошибка генерации дней');
+      setAlertMessage('Ошибка генерации дней');
     }
   };
 
@@ -87,28 +93,70 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
       setShowDistributeModal(false);
     } catch (error) {
       console.error('Error distributing point:', error);
-      alert('Ошибка распределения точки');
+      setAlertMessage('Ошибка распределения точки');
     }
   };
 
   const addPointToDay = async (e) => {
     e.preventDefault();
     if (!newPoint.address.trim()) {
-      alert('Введите адрес места');
+      setAlertMessage('Введите адрес места');
       return;
     }
+
+    const input = newPoint.address.trim();
+
+    const looksLikePureCity = input.split(',').length === 1 && input.length > 1;
+
     setAddingPoint(true);
     try {
-      await axios.post(`/api/trips/${tripId}/days/${selectedDay}/points`, 
-        { address: newPoint.address },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      if (looksLikePureCity) {
+        setAlertMessage('Для города/страны используйте блок «Рекомендации достопримечательностей» выше — там топ-10 + отели с выбором.');
+        setNewPoint({ address: '' });
+        await fetchDays();
+        await fetchPoints();
+        setAddingPoint(false);
+        return;
+      }
+
+
+      const geoRes = await axios.get('https://nominatim.openstreetmap.org/search', {
+        params: { q: input, format: 'json', limit: 1, addressdetails: 1, 'accept-language': 'ru' },
+        headers: { 'User-Agent': 'TravelPlannerApp/1.0' }
+      });
+      if (!geoRes.data || geoRes.data.length === 0) {
+        setAlertMessage('Не удалось определить координаты по адресу');
+        setAddingPoint(false);
+        return;
+      }
+      const hit = geoRes.data[0];
+      const lat = parseFloat(hit.lat);
+      const lng = parseFloat(hit.lon);
+      let resolvedName = hit.display_name || input;
+      if (hit.address) {
+        const a = hit.address;
+        const bits = [];
+        const poi = a.amenity || a.tourism || a.historic || a.shop;
+        if (poi) bits.push(poi);
+        if (a.road) bits.push(a.road + (a.house_number ? ' ' + a.house_number : ''));
+        const city = a.city || a.town || a.village;
+        if (city && bits.length === 0) bits.push(city);
+        if (bits.length) resolvedName = bits.join(', ');
+      }
+
+      await axios.post(`/api/trips/${tripId}/days/${selectedDay}/points`, {
+        place_name: resolvedName,
+        address: hit.display_name || input,
+        latitude: lat,
+        longitude: lng
+      }, { headers: { Authorization: `Bearer ${token}` } });
+
       setNewPoint({ address: '' });
       await fetchDays();
       await fetchPoints();
     } catch (error) {
       console.error('Error adding point:', error);
-      alert('Ошибка добавления точки');
+      setAlertMessage('Ошибка добавления точки');
     } finally {
       setAddingPoint(false);
     }
@@ -124,7 +172,7 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
       await fetchPoints();
     } catch (error) {
       console.error('Error removing point from day:', error);
-      alert('Ошибка удаления точки из дня');
+      setAlertMessage('Ошибка удаления точки из дня');
     }
   };
 
@@ -140,7 +188,7 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
         await fetchPoints();
       } catch (error) {
         console.error('Error deleting point:', error);
-        alert('Ошибка удаления точки');
+        setAlertMessage('Ошибка удаления точки');
       }
     }
   };
@@ -261,6 +309,14 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
         type="danger"
         confirmText="Удалить"
         cancelText="Отмена"
+      />
+
+      <Modal
+        isOpen={!!alertMessage}
+        onClose={() => setAlertMessage(null)}
+        title="Уведомление"
+        message={alertMessage}
+        type="info"
       />
     </div>
   );

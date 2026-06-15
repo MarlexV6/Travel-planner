@@ -59,10 +59,13 @@ async function getRoute(startLat, startLon, endLat, endLon, mode = 'driving') {
 
 async function checkFlightAvailability(startLat, startLon, endLat, endLon) {
     try {
-        const airports = await getNearestAirports(startLat, startLon);
-        const nearestAirport = airports[0];
+        const depAirports = await getNearestAirports(startLat, startLon);
+        const arrAirports = await getNearestAirports(endLat, endLon);
         
-        if (!nearestAirport) return null;
+        const dep = depAirports[0];
+        const arr = arrAirports[0];
+        
+        if (!dep || !arr) return null;
         
         const distance = calculateDistance(startLat, startLon, endLat, endLon);
         
@@ -76,10 +79,15 @@ async function checkFlightAvailability(startLat, startLon, endLat, endLon) {
                 duration_hours: (flightDuration / 3600).toFixed(1),
                 mode: 'flight',
                 mode_name: 'Самолет',
-                airport: {
-                    name: nearestAirport.name,
-                    latitude: nearestAirport.lat,
-                    longitude: nearestAirport.lon
+                departure_airport: {
+                    name: dep.name,
+                    latitude: dep.lat,
+                    longitude: dep.lon
+                },
+                arrival_airport: {
+                    name: arr.name,
+                    latitude: arr.lat,
+                    longitude: arr.lon
                 },
                 note: 'Примерное время полета'
             };
@@ -218,5 +226,9 @@ module.exports = {
     getRoute,
     getMultiModalRoute,
     getModeName,
-    calculateDistance
+    calculateDistance,
+    checkFlightAvailability,
+    checkFerryAvailability,
+    isNearWater,
+    getNearestAirports
 };

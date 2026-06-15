@@ -5,17 +5,15 @@ const { allowRoles } = require('../middleware/roleCheck');
 
 const router = express.Router();
 
-// Личная статистика пользователя
+
 router.get('/my', authenticateToken, async (req, res) => {
     try {
         console.log('Fetching stats for user:', req.user.id);
-        
-        // Получаем количество поездок пользователя
+
         const totalTrips = await prisma.trip.count({
             where: { user_id: req.user.id }
         });
-        
-        // Получаем количество точек маршрута пользователя (правильный подсчет)
+
         const totalPoints = await prisma.tripPoint.count({
             where: {
                 trip: {
@@ -23,16 +21,13 @@ router.get('/my', authenticateToken, async (req, res) => {
                 }
             }
         });
-        
-        // Для отладки
+
         console.log(`User ${req.user.id}: ${totalTrips} trips, ${totalPoints} points`);
-        
-        // Среднее количество точек на поездку
+
         const averagePointsPerTrip = totalTrips > 0 
             ? (totalPoints / totalTrips).toFixed(1) 
             : 0;
-        
-        // Самая длительная поездка
+
         const longestTripResult = await prisma.$queryRaw`
             SELECT 
                 title,
@@ -50,8 +45,7 @@ router.get('/my', authenticateToken, async (req, res) => {
             title: longestTripResult[0].title,
             duration_days: parseInt(longestTripResult[0].duration_days)
         } : null;
-        
-        // Предстоящие поездки
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
@@ -63,8 +57,7 @@ router.get('/my', authenticateToken, async (req, res) => {
                 }
             }
         });
-        
-        // Статистика по месяцам
+
         const tripsByMonth = await prisma.$queryRaw`
             SELECT 
                 TO_CHAR(DATE_TRUNC('month', start_date), 'YYYY-MM') as month,
@@ -77,7 +70,6 @@ router.get('/my', authenticateToken, async (req, res) => {
             LIMIT 6
         `;
         
-        // Получаем список всех поездок с количеством точек для детальной проверки
         const tripsWithPoints = await prisma.$queryRaw`
             SELECT 
                 t.id,
@@ -97,7 +89,7 @@ router.get('/my', authenticateToken, async (req, res) => {
             upcoming_trips: upcomingTrips,
             longest_trip: longestTrip,
             trips_by_month: tripsByMonth || [],
-            trips_with_points: tripsWithPoints // для отладки
+            trips_with_points: tripsWithPoints 
         });
     } catch (err) {
         console.error('Stats error:', err);
@@ -105,19 +97,19 @@ router.get('/my', authenticateToken, async (req, res) => {
     }
 });
 
-// Общая статистика (только admin)
+
 router.get('/admin', authenticateToken, allowRoles('admin'), async (req, res) => {
     try {
         console.log('Fetching admin stats');
         
-        // Основная статистика
+
         const userCount = await prisma.user.count();
         const tripCount = await prisma.trip.count();
         const pointCount = await prisma.tripPoint.count();
         
         console.log(`Admin stats: ${userCount} users, ${tripCount} trips, ${pointCount} points`);
         
-        // Статистика по ролям
+
         const usersByRole = await prisma.user.groupBy({
             by: ['role'],
             _count: {
@@ -125,7 +117,7 @@ router.get('/admin', authenticateToken, allowRoles('admin'), async (req, res) =>
             }
         });
         
-        // Топ пользователей по количеству поездок и точек
+
         const topUsers = await prisma.$queryRaw`
             SELECT 
                 u.username,
@@ -139,8 +131,7 @@ router.get('/admin', authenticateToken, allowRoles('admin'), async (req, res) =>
             ORDER BY trip_count DESC
             LIMIT 10
         `;
-        
-        // Статистика по дням недели
+
         const tripsByWeekday = await prisma.$queryRaw`
             SELECT 
                 EXTRACT(DOW FROM start_date)::int as weekday,
@@ -150,8 +141,7 @@ router.get('/admin', authenticateToken, allowRoles('admin'), async (req, res) =>
             GROUP BY EXTRACT(DOW FROM start_date)
             ORDER BY weekday
         `;
-        
-        // Активность за последние 30 дней
+
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
         
@@ -178,8 +168,7 @@ router.get('/admin', authenticateToken, allowRoles('admin'), async (req, res) =>
                 }
             }
         });
-        
-        // Дополнительная статистика: распределение точек по поездкам
+
         const pointsDistribution = await prisma.$queryRaw`
             SELECT 
                 COUNT(tp.id)::int as points_in_trip,

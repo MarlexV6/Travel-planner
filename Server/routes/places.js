@@ -4,7 +4,7 @@ const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Получить достопримечательности рядом с координатами
+
 router.get('/nearby', authenticateToken, async (req, res) => {
   try {
     const { lat, lng, radius = 5000 } = req.query;
@@ -21,7 +21,7 @@ router.get('/nearby', authenticateToken, async (req, res) => {
   }
 });
 
-// Поиск достопримечательностей по городу
+
 router.get('/search', authenticateToken, async (req, res) => {
   try {
     const { city } = req.query;
@@ -38,7 +38,7 @@ router.get('/search', authenticateToken, async (req, res) => {
   }
 });
 
-// Популярные достопримечательности
+
 router.get('/popular', authenticateToken, async (req, res) => {
   try {
     const { city } = req.query;

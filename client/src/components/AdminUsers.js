@@ -383,7 +383,7 @@ function AdminUsers() {
                     value={user.role}
                     onChange={(e) => updateUserRole(user.id, e.target.value)}
                     className="au-role-select"
-                    disabled={user.id === 1 || updatingUser}
+                    disabled={user.id === currentUser?.id || updatingUser}
                   >
                     <option value="user">Пользователь</option>
                     <option value="admin">Администратор</option>
@@ -405,7 +405,7 @@ function AdminUsers() {
                     <button 
                       onClick={() => deleteUser(user.id, user.username)} 
                       className="au-delete-button" 
-                      disabled={user.id === 1 || user.id === currentUser?.id || updatingUser}
+                      disabled={user.id === currentUser?.id || updatingUser}
                       title={user.id === currentUser?.id ? "Нельзя удалить себя" : "Удалить пользователя"}
                     >
                       Удалить

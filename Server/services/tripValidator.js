@@ -58,14 +58,12 @@ class TripValidator {
                 return { isValid: true, warnings: [], segments: [], summary: 'Маршрут содержит менее 2 точек' };
             }
 
-            // Удаляем старые предупреждения
             await prisma.tripWarning.deleteMany({ where: { trip_id: trip.id } });
 
             const segments = [];
             const warningsList = [];
             let isValid = true;
 
-            // Рассчитываем общее время поездки в днях
             let totalAvailableHours = null;
             if (trip.start_date && trip.end_date) {
                 const start = new Date(trip.start_date);
@@ -85,8 +83,7 @@ class TripValidator {
                 
                 const straightDistance = this.calculateDistance(fromCoords.lat, fromCoords.lng, toCoords.lat, toCoords.lng);
                 const routeInfo = await this.getRouteInfo(fromCoords, toCoords);
-                
-                // Определяем транспорт и время
+
                 let travelMode = 'driving';
                 let travelTime = routeInfo?.duration || (straightDistance / SPEEDS.driving);
                 
@@ -99,15 +96,13 @@ class TripValidator {
                 }
                 
                 totalTravelTime += travelTime;
-                
-                // Доступное время на этот сегмент
+
                 const pointsCount = trip.points.length;
                 const availableHoursPerSegment = totalAvailableHours ? totalAvailableHours / (pointsCount - 1) : null;
                 
                 let isSegmentFeasible = true;
                 const segmentWarnings = [];
-                
-                // ГЛАВНАЯ ПРОВЕРКА: хватает ли времени?
+
                 if (availableHoursPerSegment && travelTime > availableHoursPerSegment) {
                     isSegmentFeasible = false;
                     isValid = false;
@@ -129,7 +124,6 @@ class TripValidator {
                     });
                 }
                 
-                // Проверка на слишком большое расстояние
                 if (straightDistance > 1000) {
                     segmentWarnings.push({
                         type: 'distance',
@@ -140,7 +134,6 @@ class TripValidator {
                     });
                 }
                 
-                // Сохраняем предупреждения
                 for (const w of segmentWarnings) {
                     const saved = await prisma.tripWarning.create({
                         data: {
@@ -154,8 +147,7 @@ class TripValidator {
                     });
                     warningsList.push(saved);
                 }
-                
-                // Сохраняем сегмент
+
                 const segment = await prisma.tripSegment.upsert({
                     where: {
                         trip_id_from_point_id_to_point_id: {
@@ -194,7 +186,6 @@ class TripValidator {
                 });
             }
             
-            // Общая проверка маршрута
             let overallStatus = 'Маршрут выполним';
             if (!isValid) {
                 overallStatus = 'МАРШРУТ НЕВЫПОЛНИМ — добавьте больше дней или упростите маршрут';

@@ -56,8 +56,7 @@ function TripMap() {
   const [route, setRoute] = useState(null);
   const [loading, setLoading] = useState(true);
   const [optimizing, setOptimizing] = useState(false);
-  const [addressInput, setAddressInput] = useState('');
-  const [addressLoading, setAddressLoading] = useState(false);
+
   const [mapKey, setMapKey] = useState(0);
   const [mapInstance, setMapInstance] = useState(null);
   const [flyToPoint, setFlyToPoint] = useState(null);
@@ -75,10 +74,12 @@ function TripMap() {
   const [showPortsPairModal, setShowPortsPairModal] = useState(false);
   const [days, setDays] = useState([]);
   const [selectedDayId, setSelectedDayId] = useState('');
-  const [showSelectDayModal, setShowSelectDayModal] = useState(false);
-  const [pendingAddress, setPendingAddress] = useState('');
 
-  // Загрузка данных
+  const [pendingSeaTarget, setPendingSeaTarget] = useState(null); 
+
+
+  const [alertMessage, setAlertMessage] = useState(null);
+
   useEffect(() => {
     fetchTripDetails();
     fetchPoints();
@@ -86,10 +87,10 @@ function TripMap() {
   }, [id]);
 
   useEffect(() => {
-    if (points.length >= 2) fetchRoute();
+    if (points.length >= 2) fetchRoute(selectedDayId || null);
     setMapKey(prev => prev + 1);
     setLoading(false);
-  }, [points]);
+  }, [points, selectedDayId]);
 
   useEffect(() => {
     if (flyToPoint && mapInstance) {
@@ -123,38 +124,55 @@ function TripMap() {
     }
   };
 
-  const fetchRoute = async () => {
+  const fetchRoute = async (forDayId = null) => {
     try {
-      const response = await axios.post(`/api/trips/${id}/route`, { mode: 'driving' }, { headers: { Authorization: `Bearer ${token}` } });
+      const body = { mode: 'driving' };
+      const dayToUse = forDayId || selectedDayId;
+      if (dayToUse) body.day_id = dayToUse;
+      const response = await axios.post(`/api/trips/${id}/route`, body, { headers: { Authorization: `Bearer ${token}` } });
       if (response.data && response.data.route_possible === false && response.data.suggestion) {
         const sug = response.data.suggestion;
-        if (sug.type === 'redirect_to_port') {
-          setPortSuggestion(sug.port);
-          if (days.length === 0) await fetchDays();
-          setShowPortSuggestionModal(true);
-        } else if (sug.type === 'redirect_ports_pair') {
-          setPortsPairSuggestion({ origin: sug.origin_port, dest: sug.dest_port });
-          if (days.length === 0) await fetchDays();
-          setShowPortsPairModal(true);
+        const didAuto = await autoAddSeaPorts(sug);
+        if (!didAuto) {
+          if (sug.type === 'redirect_to_port') {
+            setPortSuggestion(sug.port);
+            if (days.length === 0) await fetchDays();
+            setShowPortSuggestionModal(true);
+          } else if (sug.type === 'redirect_ports_pair') {
+            setPortsPairSuggestion({ origin: sug.origin_port, dest: sug.dest_port });
+            if (days.length === 0) await fetchDays();
+            setShowPortsPairModal(true);
+          }
         }
       }
       setRoute(response.data);
     } catch (err) { console.error(err); }
   };
 
+  const filteredPoints = selectedDayId 
+    ? points.filter(p => p.day_id && p.day_id.toString() === selectedDayId)
+    : points;
+
   const optimizeRoute = async () => {
-    if (points.length < 3) {
-      alert('Для оптимизации нужно минимум 3 точки');
+    const pointsForOptimize = filteredPoints;
+    if (pointsForOptimize.length < 3) {
+      setAlertMessage(selectedDayId 
+        ? 'Для оптимизации дня нужно минимум 3 точки в этом дне' 
+        : 'Для оптимизации нужно минимум 3 точки');
       return;
     }
     setOptimizing(true);
     try {
-      const response = await axios.post(`/api/trips/${id}/optimize`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      const payload = {};
+      if (selectedDayId) {
+        payload.day_id = parseInt(selectedDayId);
+      }
+      const response = await axios.post(`/api/trips/${id}/optimize`, payload, { headers: { Authorization: `Bearer ${token}` } });
       setOptimizeResult(response.data);
       setShowOptimizeResultModal(true);
       if (response.data.improvement > 0) await fetchPoints();
     } catch (err) {
-      alert(err.response?.data?.error || 'Ошибка оптимизации');
+      setAlertMessage(err.response?.data?.error || 'Ошибка оптимизации');
     } finally {
       setOptimizing(false);
     }
@@ -169,11 +187,11 @@ function TripMap() {
 
   const addPointWithName = async () => {
     if (!pointName.trim()) {
-      alert('Введите название места');
+      setAlertMessage('Введите название места');
       return;
     }
     if (!selectedDayId) {
-      alert('Выберите день поездки');
+      setAlertMessage('Выберите день поездки');
       return;
     }
     setAddingPoint(true);
@@ -200,13 +218,32 @@ function TripMap() {
         order_index: points.length,
         day_id: parseInt(selectedDayId)
       }, { headers: { Authorization: `Bearer ${token}` } });
+
+      if (response.data && response.data.needsPort) {
+        setShowAddPointModal(false);
+        setPointName('');
+        setPendingPoint(null);
+        setPendingSeaTarget(response.data.target);
+        const sug = response.data.suggestion;
+        if (sug.type === 'redirect_ports_pair') {
+          setPortsPairSuggestion({ origin: sug.origin_port, dest: sug.dest_port });
+          if (days.length === 0) await fetchDays();
+          setShowPortsPairModal(true);
+        } else if (sug.type === 'redirect_to_port') {
+          setPortSuggestion(sug.port);
+          if (days.length === 0) await fetchDays();
+          setShowPortSuggestionModal(true);
+        }
+        return;
+      }
+
       setPoints([...points, response.data]);
       setShowAddPointModal(false);
       setPointName('');
       setPendingPoint(null);
     } catch (err) {
       console.error(err);
-      alert('Ошибка добавления точки');
+      setAlertMessage('Ошибка добавления точки');
     } finally {
       setAddingPoint(false);
     }
@@ -237,49 +274,16 @@ function TripMap() {
     }
   };
 
-  const addPointByAddress = async (e) => {
-    e.preventDefault();
-    if (!addressInput.trim()) {
-      alert('Введите адрес');
-      return;
-    }
-    setAddressLoading(true);
-    setPendingAddress(addressInput);
-    if (days.length === 0) await fetchDays();
-    setShowSelectDayModal(true);
-    setAddressLoading(false);
-  };
 
-  const confirmAddAddressPoint = async () => {
-    if (!pendingAddress) return;
-    if (!selectedDayId) {
-      alert('Выберите день поездки');
-      return;
-    }
-    try {
-      const response = await axios.post(`/api/trips/${id}/points`, {
-        address: pendingAddress,
-        order_index: points.length,
-        day_id: parseInt(selectedDayId)
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      setPoints([...points, response.data]);
-      setPendingAddress('');
-      setShowSelectDayModal(false);
-      setAddressInput('');
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.error || 'Ошибка добавления точки');
-    }
-  };
 
   const confirmAddPort = async () => {
     if (!portSuggestion) return;
     if (!selectedDayId) {
-      alert('Выберите день поездки');
+      setAlertMessage('Выберите день поездки');
       return;
     }
     try {
-      const response = await axios.post(`/api/trips/${id}/points`, {
+      const portResp = await axios.post(`/api/trips/${id}/points`, {
         place_name: `Порт: ${portSuggestion.name}`,
         address: portSuggestion.name,
         latitude: portSuggestion.latitude,
@@ -287,17 +291,32 @@ function TripMap() {
         order_index: points.length,
         day_id: parseInt(selectedDayId)
       }, { headers: { Authorization: `Bearer ${token}` } });
-      setPoints([...points, response.data]);
+      let newPoints = [...points, portResp.data];
+
+      if (pendingSeaTarget) {
+        const targetResp = await axios.post(`/api/trips/${id}/points`, {
+          place_name: pendingSeaTarget.place_name,
+          address: pendingSeaTarget.address || pendingSeaTarget.place_name,
+          latitude: pendingSeaTarget.latitude,
+          longitude: pendingSeaTarget.longitude,
+          order_index: newPoints.length,
+          day_id: parseInt(selectedDayId)
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        newPoints = [...newPoints, targetResp.data];
+        setPendingSeaTarget(null);
+      }
+
+      setPoints(newPoints);
       setShowPortSuggestionModal(false);
       setPortSuggestion(null);
       await fetchRoute();
-    } catch (err) { alert('Ошибка добавления порта'); }
+    } catch (err) { setAlertMessage('Ошибка добавления порта'); }
   };
 
   const confirmAddPortsPair = async () => {
     if (!portsPairSuggestion) return;
     if (!selectedDayId) {
-      alert('Выберите день для портов');
+      setAlertMessage('Выберите день для портов');
       return;
     }
     try {
@@ -317,12 +336,140 @@ function TripMap() {
         order_index: points.length + 1,
         day_id: parseInt(selectedDayId)
       }, { headers: { Authorization: `Bearer ${token}` } });
-      setPoints([...points, resp1.data, resp2.data]);
+      let newPoints = [...points, resp1.data, resp2.data];
+
+      if (pendingSeaTarget) {
+        const targetResp = await axios.post(`/api/trips/${id}/points`, {
+          place_name: pendingSeaTarget.place_name,
+          address: pendingSeaTarget.address || pendingSeaTarget.place_name,
+          latitude: pendingSeaTarget.latitude,
+          longitude: pendingSeaTarget.longitude,
+          order_index: newPoints.length,
+          day_id: parseInt(selectedDayId)
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        newPoints = [...newPoints, targetResp.data];
+        setPendingSeaTarget(null);
+      }
+
+      setPoints(newPoints);
       setShowPortsPairModal(false);
       setPortsPairSuggestion(null);
       await fetchRoute();
-    } catch (err) { alert('Ошибка добавления портов'); }
+    } catch (err) { setAlertMessage('Ошибка добавления портов'); }
   };
+
+  const autoAddSeaPorts = async (suggestion) => {
+    if (!suggestion) return false;
+
+    try {
+      const dayToUse = selectedDayId || (days.length > 0 ? days[0].id.toString() : null);
+      if (!dayToUse) {
+        console.warn('No day available for auto port insert');
+      }
+
+      const addedPorts = [];
+
+      if (suggestion.type === 'redirect_to_port' && suggestion.port) {
+        const p = suggestion.port;
+        const resp = await axios.post(`/api/trips/${id}/points`, {
+          place_name: `Порт: ${p.name}`,
+          address: p.name || 'Автоматический порт',
+          latitude: p.latitude,
+          longitude: p.longitude,
+          day_id: dayToUse ? parseInt(dayToUse) : null
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        addedPorts.push(resp.data);
+      } else if (suggestion.type === 'redirect_ports_pair' && suggestion.origin_port && suggestion.dest_port) {
+        const o = suggestion.origin_port;
+        const d = suggestion.dest_port;
+        const r1 = await axios.post(`/api/trips/${id}/points`, {
+          place_name: `Порт отправления: ${o.name}`,
+          address: o.name,
+          latitude: o.latitude,
+          longitude: o.longitude,
+          day_id: dayToUse ? parseInt(dayToUse) : null
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        const r2 = await axios.post(`/api/trips/${id}/points`, {
+          place_name: `Порт прибытия: ${d.name}`,
+          address: d.name,
+          latitude: d.latitude,
+          longitude: d.longitude,
+          day_id: dayToUse ? parseInt(dayToUse) : null
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        addedPorts.push(r1.data, r2.data);
+      } else if (suggestion.type === 'redirect_airports_pair' && suggestion.departure_airport && suggestion.arrival_airport) {
+        const o = suggestion.departure_airport;
+        const d = suggestion.arrival_airport;
+        const r1 = await axios.post(`/api/trips/${id}/points`, {
+          place_name: `Аэропорт отправления: ${o.name}`,
+          address: o.name,
+          latitude: o.latitude,
+          longitude: o.longitude,
+          day_id: dayToUse ? parseInt(dayToUse) : null
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        const r2 = await axios.post(`/api/trips/${id}/points`, {
+          place_name: `Аэропорт прибытия: ${d.name}`,
+          address: d.name,
+          latitude: d.latitude,
+          longitude: d.longitude,
+          day_id: dayToUse ? parseInt(dayToUse) : null
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        addedPorts.push(r1.data, r2.data);
+      } else if (suggestion.type === 'redirect_to_airport' && suggestion.airport) {
+        // legacy single airport
+        const p = suggestion.airport;
+        const resp = await axios.post(`/api/trips/${id}/points`, {
+          place_name: `Аэропорт: ${p.name}`,
+          address: p.name || 'Автоматический аэропорт',
+          latitude: p.latitude,
+          longitude: p.longitude,
+          day_id: dayToUse ? parseInt(dayToUse) : null
+        }, { headers: { Authorization: `Bearer ${token}` } });
+        addedPorts.push(resp.data);
+      } else {
+        return false;
+      }
+
+      await fetchPoints();
+
+      const currentRes = await axios.get(`/api/trips/${id}/points`, { headers: { Authorization: `Bearer ${token}` } });
+      let currentPoints = currentRes.data || [];
+
+      const segIdx = suggestion.segment_index != null ? suggestion.segment_index : (currentPoints.length - 2);
+      const destOriginalIndex = segIdx + 1;
+
+      const portIds = new Set(addedPorts.map(p => p.id));
+      const nonPorts = currentPoints.filter(p => !portIds.has(p.id));
+
+      let finalOrder = [...nonPorts];
+      const insertBeforeIdx = Math.min(destOriginalIndex, finalOrder.length);
+      finalOrder.splice(insertBeforeIdx, 0, ...addedPorts);
+
+      // Properly persist new order by updating order_index (and day_id)
+      const updatePromises = finalOrder.map((pt, idx) =>
+        axios.put(`/api/trips/points/${pt.id}/assign-day`, {
+          day_id: pt.day_id || null,
+          order_index: idx
+        }, { headers: { Authorization: `Bearer ${token}` } })
+      );
+      await Promise.all(updatePromises);
+
+      await fetchPoints();
+      await fetchRoute();
+
+      const portNames = addedPorts.map(p => p.place_name).join(', ');
+      setAlertMessage(`Автоматически добавлен(ы) пункт(ы) пересадки: ${portNames}\n(пересечение обработано)`);
+
+      return true;
+    } catch (err) {
+      console.error('autoAddSeaPorts error:', err);
+      setAlertMessage('Не удалось автоматически добавить пункт(ы) пересадки. Можно добавить вручную.');
+      return false;
+    }
+  };
+
+
+
 
   const confirmDeletePoint = async () => {
     if (pointToDelete) {
@@ -331,7 +478,7 @@ function TripMap() {
         setPoints(points.filter(p => p.id !== pointToDelete.id));
         setShowDeleteModal(false);
         setPointToDelete(null);
-      } catch (err) { alert('Ошибка удаления'); }
+      } catch (err) { setAlertMessage('Ошибка удаления'); }
     }
   };
 
@@ -340,11 +487,61 @@ function TripMap() {
   if (loading && points.length === 0) return <div className="tm-loading">Загрузка карты...</div>;
 
   const defaultCenter = [53.893009, 27.567444];
-  const positions = points.map(p => [parseFloat(p.latitude), parseFloat(p.longitude)]);
+  const positions = filteredPoints.map(p => [parseFloat(p.latitude), parseFloat(p.longitude)]);
   const center = positions.length > 0 ? positions[0] : defaultCenter;
-  const routePositions = route?.polyline && route.polyline.length > 0
+
+  const getRouteSegments = (polylineCoords, currentPoints) => {
+    if (!polylineCoords || polylineCoords.length === 0) {
+      return [currentPoints.map(p => [parseFloat(p.latitude), parseFloat(p.longitude)])];
+    }
+    const positions = polylineCoords.map(p => [p.lat, p.lng]);
+    const portCoords = currentPoints
+      .filter(p => p.place_name && (p.place_name.startsWith('Порт') || p.place_name.startsWith('Аэропорт')))
+      .map(p => ({ lat: parseFloat(p.latitude), lng: parseFloat(p.longitude) }));
+    if (portCoords.length === 0) {
+      return [positions];
+    }
+    const segments = [];
+    let currentStart = 0;
+    const sortedPortIndices = [];
+    for (let i = 0; i < positions.length; i++) {
+      const pos = positions[i];
+      const isPort = portCoords.some(port => 
+        Math.abs(pos[0] - port.lat) < 0.001 && Math.abs(pos[1] - port.lng) < 0.001
+      );
+      if (isPort) {
+        sortedPortIndices.push(i);
+      }
+    }
+    if (sortedPortIndices.length === 0) {
+      return [positions];
+    }
+
+    if (sortedPortIndices[0] > currentStart) {
+      segments.push(positions.slice(currentStart, sortedPortIndices[0] + 1));
+    }
+
+    for (let k = 1; k < sortedPortIndices.length; k += 2) {
+      const arriveIdx = sortedPortIndices[k];
+      const nextDepartOrEnd = (k + 1 < sortedPortIndices.length) ? sortedPortIndices[k + 1] : positions.length;
+      if (nextDepartOrEnd > arriveIdx) {
+        segments.push(positions.slice(arriveIdx, nextDepartOrEnd + 1));
+      }
+    }
+
+    if (sortedPortIndices.length % 2 === 1) {
+      const lastArrive = sortedPortIndices[sortedPortIndices.length - 1];
+      if (positions.length > lastArrive + 1) {
+        segments.push(positions.slice(lastArrive + 1));
+      }
+    }
+    return segments.length > 0 ? segments : [positions];
+  };
+
+  const rawRoutePositions = route?.polyline && route.polyline.length > 0
     ? route.polyline.map(p => [p.lat, p.lng])
     : positions;
+  const routeSegments = getRouteSegments(route?.polyline || [], filteredPoints);
 
   return (
     <div className="tm-container">
@@ -355,21 +552,7 @@ function TripMap() {
         </Link>
       </div>
 
-      <div className="tm-add-form">
-        <form onSubmit={addPointByAddress} className="tm-address-form">
-          <input
-            type="text"
-            placeholder="Введите адрес (например: Эйфелева башня, Париж)"
-            value={addressInput}
-            onChange={(e) => setAddressInput(e.target.value)}
-            className="tm-address-input"
-          />
-          <button type="submit" disabled={addressLoading} className="tm-address-button">
-            {addressLoading ? 'Поиск...' : 'Добавить по адресу'}
-          </button>
-        </form>
-        <div className="tm-hint">Кликните на карту, чтобы добавить точку в выбранном месте</div>
-      </div>
+
 
       {/* Рекомендации достопримечательностей через AI */}
       <div className="tm-places-section">
@@ -377,19 +560,42 @@ function TripMap() {
         <CityPlacesPicker tripId={id} onPointsAdded={fetchPoints} />
       </div>
 
-      {route?.distance && points.length >= 2 && (
+      {/* Переключатель дней на карте (требование: разделение по дням) */}
+      {days.length > 0 && (
+        <div className="tm-day-navigation">
+          <button
+            onClick={() => setSelectedDayId('')}
+            className={`day-button ${!selectedDayId ? 'day-button-active' : ''}`}
+          >
+            Все дни
+          </button>
+          {days.map(day => (
+            <button
+              key={day.id}
+              onClick={() => setSelectedDayId(day.id.toString())}
+              className={`day-button ${selectedDayId === day.id.toString() ? 'day-button-active' : ''}`}
+            >
+              День {day.day_number}
+              <br />
+              <small>{new Date(day.date).toLocaleDateString('ru-RU')}</small>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {route?.distance && filteredPoints.length >= 2 && (
         <div className="tm-route-info">
           <div className="tm-route-card">
             <div>
               <div><strong>Расстояние:</strong> {route.distance} км</div>
               <div><strong>Время в пути:</strong> ~{route.duration} ч</div>
-              <div><strong>Точек маршрута:</strong> {points.length}</div>
+              <div><strong>Точек маршрута:</strong> {filteredPoints.length}</div>
             </div>
           </div>
         </div>
       )}
 
-      {points.length >= 3 && (
+      {filteredPoints.length >= 3 && (
         <button onClick={optimizeRoute} disabled={optimizing} className={optimizing ? 'tm-optimize-button-disabled' : 'tm-optimize-button'}>
           {optimizing ? 'Оптимизация...' : 'Оптимизировать маршрут (кратчайший путь)'}
         </button>
@@ -400,7 +606,7 @@ function TripMap() {
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='OpenStreetMap contributors' />
           <AddMarkerOnClick onAddPoint={addPointByClick} />
           <MapController onMapReady={setMapInstance} center={flyToPoint ? [flyToPoint.lat, flyToPoint.lng] : null} zoom={15} />
-          {points.map((point, idx) => (
+          {filteredPoints.map((point, idx) => (
             <Marker key={point.id} position={[parseFloat(point.latitude), parseFloat(point.longitude)]} icon={customIcon}>
               <Popup>
                 <div>
@@ -411,17 +617,19 @@ function TripMap() {
               </Popup>
             </Marker>
           ))}
-          {routePositions.length > 1 && <Polyline positions={routePositions} color="#2196F3" weight={4} opacity={0.8} />}
+          {routeSegments.map((seg, idx) => (
+            seg.length > 1 && <Polyline key={idx} positions={seg} color="#2196F3" weight={4} opacity={0.8} />
+          ))}
         </MapContainer>
       </div>
 
       <div className="tm-points-section">
-        <h3>Точки маршрута ({points.length}):</h3>
-        {points.length === 0 ? (
-          <div className="tm-empty-state"><p>Нет добавленных точек</p><p>Кликните на карту, чтобы добавить первую точку</p></div>
+        <h3>Точки маршрута {selectedDayId ? `(День ${days.find(d => d.id.toString() === selectedDayId)?.day_number || ''})` : ''} ({filteredPoints.length}):</h3>
+        {filteredPoints.length === 0 ? (
+          <div className="tm-empty-state"><p>Нет добавленных точек {selectedDayId ? 'для этого дня' : ''}</p><p>Кликните на карту, чтобы добавить первую точку</p></div>
         ) : (
           <div className="tm-points-grid">
-            {points.map((point, idx) => (
+            {filteredPoints.map((point, idx) => (
               <div key={point.id} className="tm-point-card" onClick={() => centerOnPoint(parseFloat(point.latitude), parseFloat(point.longitude))}>
                 <div className="tm-point-number">{idx + 1}</div>
                 <div className="tm-point-info">
@@ -448,13 +656,7 @@ function TripMap() {
         </div>
       </Modal>
 
-      <Modal isOpen={showSelectDayModal} onClose={() => setShowSelectDayModal(false)} onConfirm={confirmAddAddressPoint}
-        title="Выберите день поездки" type="confirm" confirmText="Добавить" cancelText="Отмена">
-        <p>Добавление адреса: {pendingAddress}</p>
-        <select value={selectedDayId} onChange={(e) => setSelectedDayId(e.target.value)} className="modal-input">
-          {days.map(day => <option key={day.id} value={day.id}>День {day.day_number} ({new Date(day.date).toLocaleDateString('ru-RU')})</option>)}
-        </select>
-      </Modal>
+
 
       <Modal isOpen={showPortSuggestionModal} onClose={() => setShowPortSuggestionModal(false)} onConfirm={confirmAddPort}
         title="Предложение: добавить ближайший порт" type="confirm" confirmText="Добавить порт" cancelText="Отмена">
@@ -474,6 +676,8 @@ function TripMap() {
         </select>
       </Modal>
 
+
+
       <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} onConfirm={confirmDeletePoint}
         title="Подтверждение удаления" message={`Вы уверены, что хотите удалить точку "${pointToDelete?.place_name}"?`}
         type="danger" confirmText="Удалить" cancelText="Отмена" />
@@ -484,7 +688,7 @@ function TripMap() {
           <div className="optimize-result">
             {optimizeResult.already_optimal ? (
               <div><div className="optimize-title info">Маршрут уже оптимален</div>
-              <div>Расстояние: {optimizeResult.old_distance} км</div></div>
+              <div>Расстояние: {optimizeResult.new_distance} км</div></div>
             ) : (
               <div><div className="optimize-title success">Маршрут оптимизирован</div>
               <div>Старый порядок: {optimizeResult.old_order?.join(' → ')}</div>
@@ -495,6 +699,14 @@ function TripMap() {
           </div>
         )}
       </Modal>
+
+      <Modal
+        isOpen={!!alertMessage}
+        onClose={() => setAlertMessage(null)}
+        title="Уведомление"
+        message={alertMessage}
+        type="info"
+      />
     </div>
   );
 }

@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Настройка axios interceptors
+
   useEffect(() => {
     const interceptor = axios.interceptors.request.use(
       (config) => {
@@ -52,7 +52,6 @@ export const AuthProvider = ({ children }) => {
     return () => axios.interceptors.request.eject(interceptor);
   }, []);
 
-  // Слушаем изменения в localStorage (для нескольких вкладок)
   useEffect(() => {
     const handleStorageChange = () => {
       const newToken = localStorage.getItem('token');
@@ -69,7 +68,6 @@ export const AuthProvider = ({ children }) => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  // Инициализация аутентификации
   useEffect(() => {
     const initAuth = async () => {
       const storedToken = localStorage.getItem('token');
@@ -79,7 +77,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const userData = JSON.parse(storedUser);
           setUser(userData);
-          await fetchUser(); // проверка валидности токена
+          await fetchUser(); 
         } catch (e) {
           console.error('Error parsing user data:', e);
           localStorage.removeItem('token');

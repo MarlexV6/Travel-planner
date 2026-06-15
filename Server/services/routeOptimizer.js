@@ -1,9 +1,8 @@
-// Алгоритм ближайшего соседа для оптимизации порядка посещения точек
-// Начальная точка всегда остается первой
+
 function optimizeRoute(points) {
   if (!points || points.length < 3) return points;
   
-  // Сохраняем первую точку отдельно
+
   const startPoint = points[0];
   const remainingPoints = points.slice(1);
   
@@ -26,7 +25,7 @@ function optimizeRoute(points) {
         current.latitude, current.longitude,
         unvisited[i].latitude, unvisited[i].longitude
       );
-      if (distance < minDistance - 0.001) { // Добавляем порог
+      if (distance < minDistance - 0.001) { 
         minDistance = distance;
         nearestIndex = i;
       }
@@ -64,7 +63,7 @@ function calculateTotalDistance(points) {
   return total;
 }
 
-// Проверка, отличается ли маршрут (для определения необходимости оптимизации)
+
 function isDifferentRoute(original, optimized) {
   if (original.length !== optimized.length) return true;
   

@@ -2,7 +2,7 @@ const { Client } = require('@googlemaps/google-maps-services-js');
 
 const client = new Client({});
 
-// База данных портов (для демонстрации)
+
 const ports = {
   airports: [
     { name: "Шереметьево (SVO)", lat: 55.9726, lon: 37.4146, type: "airport" },
@@ -15,11 +15,9 @@ const ports = {
   ]
 };
 
-// Проверка, можно ли доехать на машине
 async function checkCarAccess(lat, lng) {
   try {
-    // Здесь можно использовать Google Maps Roads API для проверки
-    // или Distance Matrix API для проверки, есть ли дорога
+
     const response = await client.distancematrix({
       params: {
         origins: [`${lat},${lng}`],
@@ -29,7 +27,7 @@ async function checkCarAccess(lat, lng) {
       }
     });
     
-    // Если расстояние 0 и есть статус OK, значит точка доступна
+
     return response.data.rows[0].elements[0].status === 'OK';
   } catch (error) {
     console.error('Error checking car access:', error);
@@ -37,7 +35,7 @@ async function checkCarAccess(lat, lng) {
   }
 }
 
-// Поиск ближайшего порта или аэропорта
+
 function findNearestPort(lat, lng, type = 'both') {
   let allPorts = [];
   if (type === 'both' || type === 'airport') allPorts.push(...ports.airports);
@@ -57,9 +55,9 @@ function findNearestPort(lat, lng, type = 'both') {
   return { port: nearest, distance: minDistance };
 }
 
-// Расчет расстояния по формуле гаверсинуса
+
 function calculateDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Радиус Земли в км
+  const R = 6371; 
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a = 
@@ -70,7 +68,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// Поиск оптимального маршрута между точками
+
 async function findOptimalRoute(points, mode = 'driving') {
   if (!points || points.length < 2) return null;
   
@@ -113,7 +111,6 @@ async function findOptimalRoute(points, mode = 'driving') {
   }
 }
 
-// Расчет времени в пути с учетом пересадок на порты
 async function calculateTravelTimeWithTransfers(points, averageSpeed = 60) {
   const segments = [];
   let totalTime = 0;
@@ -125,7 +122,7 @@ async function calculateTravelTimeWithTransfers(points, averageSpeed = 60) {
     const hasCarAccess = await checkCarAccess(start.latitude, start.longitude);
     
     if (hasCarAccess) {
-      // Можно ехать на машине
+
       const route = await findOptimalRoute([start, end], 'driving');
       if (route) {
         segments.push({
@@ -139,7 +136,7 @@ async function calculateTravelTimeWithTransfers(points, averageSpeed = 60) {
         totalTime += route.duration_seconds;
       }
     } else {
-      // Нужно искать порт/аэропорт
+
       const nearestPort = findNearestPort(start.latitude, start.longitude);
       const toPort = await findOptimalRoute([start, nearestPort.port], 'driving');
       const fromPort = await findOptimalRoute([nearestPort.port, end], 'driving');

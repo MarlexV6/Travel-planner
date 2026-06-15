@@ -5,7 +5,7 @@ const { allowRoles } = require('../middleware/roleCheck');
 
 const router = express.Router();
 
-// Получить всех пользователей (только admin)
+
 router.get('/', authenticateToken, allowRoles('admin'), async (req, res) => {
     try {
         const users = await prisma.user.findMany({
@@ -38,7 +38,7 @@ router.get('/', authenticateToken, allowRoles('admin'), async (req, res) => {
     }
 });
 
-// Получить конкретного пользователя
+
 router.get('/:id', authenticateToken, async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
@@ -101,23 +101,19 @@ router.get('/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// Обновить пользователя (роль, имя, email)
+
 router.put('/:id', authenticateToken, async (req, res) => {
     try {
         const userId = parseInt(req.params.id);
         const { role, username, email } = req.body;
         
-        // Проверка прав
+
         if (req.user.role !== 'admin') {
             return res.status(403).json({ error: 'Доступ запрещен' });
         }
         
-        // Нельзя менять супер-админа (id = 1)
-        if (userId === 1 && role && role !== 'admin') {
-            return res.status(400).json({ error: 'Нельзя изменить роль главного администратора' });
-        }
         
-        // Проверка уникальности username если он меняется
+
         if (username) {
             const existingUser = await prisma.user.findFirst({
                 where: {
@@ -130,7 +126,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
             }
         }
         
-        // Проверка уникальности email если он меняется
+
         if (email) {
             const existingUser = await prisma.user.findFirst({
                 where: {
@@ -143,7 +139,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
             }
         }
         
-        // Формируем данные для обновления
+
         const updateData = {};
         if (role) updateData.role = role;
         if (username) updateData.username = username;
@@ -176,7 +172,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// Удалить пользователя (только admin)
+
 router.delete('/:id', authenticateToken, allowRoles('admin'), async (req, res) => {
     try {
         const userId = parseInt(req.params.id);

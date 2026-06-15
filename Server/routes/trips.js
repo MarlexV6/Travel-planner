@@ -9,7 +9,6 @@ const axios = require('axios');
 
 const router = express.Router();
 
-// Получить ВСЕ поездки (для админа) или только свои (для пользователя)
 router.get('/', authenticateToken, async (req, res) => {
     try {
         let trips;
@@ -39,7 +38,6 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
-// Проверка конфликта дат
 router.post('/:tripId/check-dates', authenticateToken, async (req, res) => {
   try {
     const tripId = parseInt(req.params.tripId);
@@ -75,7 +73,6 @@ router.post('/:tripId/check-dates', authenticateToken, async (req, res) => {
   }
 });
 
-// Перенос точек на новые даты
 router.post('/:tripId/move-points', authenticateToken, async (req, res) => {
   try {
     const tripId = parseInt(req.params.tripId);
@@ -121,7 +118,6 @@ router.post('/:tripId/move-points', authenticateToken, async (req, res) => {
   }
 });
 
-// Создать поездку (POST /api/trips)
 router.post('/', authenticateToken, async (req, res) => {
     try {
         const { title, start_date, end_date } = req.body;
@@ -192,7 +188,6 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 });
 
-// Получить ТОЛЬКО свои поездки (для админа)
 router.get('/my-only', authenticateToken, async (req, res) => {
     try {
         const trips = await prisma.trip.findMany({
@@ -206,7 +201,6 @@ router.get('/my-only', authenticateToken, async (req, res) => {
     }
 });
 
-// Получить одну поездку
 router.get('/:tripId', authenticateToken, async (req, res) => {
     try {
         const tripId = parseInt(req.params.tripId);
@@ -248,7 +242,6 @@ router.get('/:tripId', authenticateToken, async (req, res) => {
     }
 });
 
-// Получить детали поездки с маршрутом
 router.get('/:tripId/details', authenticateToken, async (req, res) => {
     try {
         const tripId = parseInt(req.params.tripId);
@@ -297,18 +290,24 @@ router.get('/:tripId/details', authenticateToken, async (req, res) => {
     }
 });
 
-// Оптимизировать порядок точек маршрута
 router.post('/:tripId/optimize', authenticateToken, async (req, res) => {
     try {
         const tripId = parseInt(req.params.tripId);
+        const dayId = req.body.day_id ? parseInt(req.body.day_id) : null;
+        
+        const where = { trip_id: tripId };
+        if (dayId) {
+            where.day_id = dayId;
+        }
         
         const points = await prisma.tripPoint.findMany({
-            where: { trip_id: tripId },
+            where,
             orderBy: { order_index: 'asc' }
         });
         
         if (points.length < 3) {
-            return res.status(400).json({ error: 'Для оптимизации нужно минимум 3 точки' });
+            const scope = dayId ? 'для этого дня' : 'для маршрута';
+            return res.status(400).json({ error: `Для оптимизации нужно минимум 3 точки ${scope}` });
         }
         
         const currentOrderIds = points.map(p => p.id);
@@ -339,15 +338,26 @@ router.post('/:tripId/optimize', authenticateToken, async (req, res) => {
                 old_distance: oldDistance.toFixed(1),
                 new_distance: oldDistance.toFixed(1),
                 improvement: 0,
-                already_optimal: true
+                already_optimal: true,
+                day_id: dayId
             });
         }
         
-        for (let i = 0; i < optimizedPoints.length; i++) {
-            await prisma.tripPoint.update({
-                where: { id: optimizedPoints[i].id },
-                data: { order_index: i }
-            });
+        if (dayId) {
+            const originalSlots = points.map(p => p.order_index).sort((a, b) => a - b);
+            for (let i = 0; i < optimizedPoints.length; i++) {
+                await prisma.tripPoint.update({
+                    where: { id: optimizedPoints[i].id },
+                    data: { order_index: originalSlots[i] }
+                });
+            }
+        } else {
+            for (let i = 0; i < optimizedPoints.length; i++) {
+                await prisma.tripPoint.update({
+                    where: { id: optimizedPoints[i].id },
+                    data: { order_index: i }
+                });
+            }
         }
         
         res.json({
@@ -358,7 +368,8 @@ router.post('/:tripId/optimize', authenticateToken, async (req, res) => {
             new_distance: newDistance.toFixed(1),
             improvement: improvement.toFixed(1),
             first_point_preserved: true,
-            already_optimal: false
+            already_optimal: false,
+            day_id: dayId
         });
     } catch (error) {
         console.error('Error optimizing route:', error);
@@ -366,7 +377,6 @@ router.post('/:tripId/optimize', authenticateToken, async (req, res) => {
     }
 });
 
-// Обновить поездку (даты, название)
 router.put('/:tripId', authenticateToken, async (req, res) => {
     try {
         const tripId = parseInt(req.params.tripId);
@@ -397,8 +407,7 @@ router.put('/:tripId', authenticateToken, async (req, res) => {
         if (endDate < startDate) {
             return res.status(400).json({ error: 'Дата окончания не может быть раньше даты начала' });
         }
-        
-        // Проверка пересечения с другими поездками
+
         const conflictingTrips = await prisma.trip.findMany({
             where: {
                 user_id: req.user.id,
@@ -427,8 +436,7 @@ router.put('/:tripId', authenticateToken, async (req, res) => {
                 }
             });
         }
-        
-        // Обновляем поездку
+
         const updatedTrip = await prisma.trip.update({
             where: { id: tripId },
             data: { 
@@ -437,8 +445,7 @@ router.put('/:tripId', authenticateToken, async (req, res) => {
                 end_date: endDate 
             }
         });
-        
-        // Проверяем точки, выходящие за пределы новых дат
+
         const unavailableDates = [];
         for (const point of trip.points) {
             if (point.created_at) {
@@ -464,7 +471,6 @@ router.put('/:tripId', authenticateToken, async (req, res) => {
     }
 });
 
-// Удалить поездку
 router.delete('/:tripId', authenticateToken, async (req, res) => {
     try {
         const tripId = parseInt(req.params.tripId);
@@ -492,12 +498,15 @@ router.delete('/:tripId', authenticateToken, async (req, res) => {
     }
 });
 
-// Получить маршрут
 router.post('/:tripId/route', authenticateToken, async (req, res) => {
     try {
         const tripId = parseInt(req.params.tripId);
+        const where = { trip_id: tripId };
+        if (req.body.day_id) {
+            where.day_id = parseInt(req.body.day_id);
+        }
         const points = await prisma.tripPoint.findMany({
-            where: { trip_id: tripId },
+            where,
             orderBy: { order_index: 'asc' }
         });
         
@@ -510,10 +519,11 @@ router.post('/:tripId/route', authenticateToken, async (req, res) => {
             });
         }
         
-        // Build route segment by segment to detect impossible segments
         const fullPolyline = [];
         let totalDistance = 0;
         let totalDuration = 0;
+        let hadBadSegment = false;
+        let suggestion = null;
 
         for (let i = 0; i < points.length - 1; i++) {
             const a = points[i];
@@ -523,7 +533,6 @@ router.post('/:tripId/route', authenticateToken, async (req, res) => {
             const endLat = parseFloat(b.latitude);
             const endLon = parseFloat(b.longitude);
 
-            // Try driving route first
             let segmentRoute = null;
             try {
                 segmentRoute = await routing.getRoute(startLat, startLon, endLat, endLon, 'driving');
@@ -532,7 +541,7 @@ router.post('/:tripId/route', authenticateToken, async (req, res) => {
             }
 
             if (!segmentRoute) {
-                // Try multimodal options (ferry/flight)
+
                 try {
                     const multi = await routing.getMultiModalRoute(startLat, startLon, endLat, endLon);
                     if (multi && multi.length > 0) {
@@ -544,82 +553,97 @@ router.post('/:tripId/route', authenticateToken, async (req, res) => {
             }
 
             if (!segmentRoute) {
-                // No route found - first try to suggest flight (nearest airport), then water port
-                try {
-                    const flightSuggestion = await routing.checkFlightAvailability(startLat, startLon, endLat, endLon);
-                    if (flightSuggestion && flightSuggestion.available && flightSuggestion.airport) {
-                        return res.json({
-                            route_possible: false,
-                            suggestion: {
+                const aIsPort = a.place_name && a.place_name.startsWith('Порт:');
+                const bIsPort = b.place_name && b.place_name.startsWith('Порт:');
+
+                if (aIsPort && bIsPort) {
+
+                    fullPolyline.push({ lat: startLat, lng: startLon });
+                    fullPolyline.push({ lat: endLat, lng: endLon });
+
+                } else {
+
+                    try {
+                        const flightSuggestion = await routing.checkFlightAvailability(startLat, startLon, endLat, endLon);
+                        if (flightSuggestion && flightSuggestion.available && flightSuggestion.airport) {
+                            suggestion = suggestion || {
                                 type: 'redirect_to_airport',
                                 segment_index: i,
                                 airport: flightSuggestion.airport,
                                 message: 'Нет дорожного маршрута. Предлагается доставить пассажиров к ближайшему аэропорту.'
-                            }
-                        });
+                            };
+                            fullPolyline.push({ lat: startLat, lng: startLon });
+                            fullPolyline.push({ lat: endLat, lng: endLon });
+                            hadBadSegment = true;
+                            continue;
+                        }
+                    } catch (e) {
+                        console.error('Flight suggestion error:', e.message);
                     }
-                } catch (e) {
-                    console.error('Flight suggestion error:', e.message);
-                }
 
-                // Suggest nearest ports (origin and destination)
-                const originPort = await getNearestPort(startLat, startLon);
-                const destPort = await getNearestPort(endLat, endLon);
-                if (originPort && destPort) {
-                    return res.json({
-                        route_possible: false,
-                        suggestion: {
+          
+                    const originPort = await getNearestPort(startLat, startLon);
+                    const destPort = await getNearestPort(endLat, endLon);
+                    if (originPort && destPort) {
+                        suggestion = suggestion || {
                             type: 'redirect_ports_pair',
                             segment_index: i,
                             origin_port: originPort,
                             dest_port: destPort,
                             message: 'Не удалось проложить дорожный маршрут. Предлагается перенаправление к ближайшим портам (отправление и прибытие).'
-                        }
-                    });
-                }
+                        };
+                        fullPolyline.push({ lat: startLat, lng: startLon });
+                        fullPolyline.push({ lat: endLat, lng: endLon });
+                        hadBadSegment = true;
+                        continue;
+                    }
 
-                // If only dest port found, suggest it
-                const nearestPort = destPort;
-                if (nearestPort) {
-                    return res.json({
-                        route_possible: false,
-                        suggestion: {
+
+                    const nearestPort = destPort;
+                    if (nearestPort) {
+                        suggestion = suggestion || {
                             type: 'redirect_to_port',
                             segment_index: i,
                             port: nearestPort,
                             message: 'Не удалось проложить дорожный маршрут между точками. Предлагается перенаправление к ближайшему порту.'
-                        }
-                    });
-                }
+                        };
+                        fullPolyline.push({ lat: startLat, lng: startLon });
+                        fullPolyline.push({ lat: endLat, lng: endLon });
+                        hadBadSegment = true;
+                        continue;
+                    }
 
-                // If no port found - return direct coordinates as fallback
-                const directPath = points.map(p => ({ lat: parseFloat(p.latitude), lng: parseFloat(p.longitude) }));
-                return res.json({ polyline: directPath, distance: null, duration: null, route_possible: false });
+                    
+                    fullPolyline.push({ lat: startLat, lng: startLon });
+                    fullPolyline.push({ lat: endLat, lng: endLon });
+                    hadBadSegment = true;
+                }
             }
 
-            // Append segment geometry
-            if (segmentRoute.geometry) {
+
+            if (segmentRoute && segmentRoute.geometry) {
                 try {
                     const coords = decodePolyline(segmentRoute.geometry);
                     fullPolyline.push(...coords);
                 } catch (e) {
-                    // ignore decode errors
+
                 }
-            } else if (segmentRoute.steps) {
-                // if multimodal returns steps or location info, approximate by endpoints
+            } else if (segmentRoute && segmentRoute.steps) {
+
                 fullPolyline.push({ lat: startLat, lng: startLon });
                 fullPolyline.push({ lat: endLat, lng: endLon });
             }
 
-            if (segmentRoute.distance) totalDistance += segmentRoute.distance;
-            if (segmentRoute.duration) totalDuration += segmentRoute.duration;
+            if (segmentRoute && segmentRoute.distance) totalDistance += segmentRoute.distance;
+            if (segmentRoute && segmentRoute.duration) totalDuration += segmentRoute.duration;
         }
 
         res.json({
             polyline: fullPolyline,
             distance: totalDistance ? totalDistance.toFixed(1) : null,
             duration: totalDuration ? (totalDuration / 3600).toFixed(1) : null,
-            route_possible: true
+            route_possible: !hadBadSegment,
+            suggestion: suggestion
         });
     } catch (error) {
         console.error('Route error:', error);
@@ -627,7 +651,7 @@ router.post('/:tripId/route', authenticateToken, async (req, res) => {
     }
 });
 
-// Получить точки поездки
+
 router.get('/:tripId/points', authenticateToken, async (req, res) => {
     try {
         const points = await prisma.tripPoint.findMany({
@@ -640,7 +664,6 @@ router.get('/:tripId/points', authenticateToken, async (req, res) => {
     }
 });
 
-// Добавить точку
 router.post('/:tripId/points', authenticateToken, async (req, res) => {
     try {
         const tripId = parseInt(req.params.tripId);
@@ -648,8 +671,10 @@ router.post('/:tripId/points', authenticateToken, async (req, res) => {
         
         console.log('Adding point request:', { place_name, address, latitude, longitude });
         
+        let geocoded = null;
+
         if (address && (!latitude || !longitude)) {
-            const geocoded = await geocodeAddress(address);
+            geocoded = await geocodeAddress(address);
             if (geocoded) {
                 latitude = geocoded.latitude;
                 longitude = geocoded.longitude;
@@ -663,12 +688,21 @@ router.post('/:tripId/points', authenticateToken, async (req, res) => {
             }
         }
 
-        // If geocoded but vague (country or low confidence) - offer suggestions
-        if (address && (!place_name || place_name.toLowerCase() === address.toLowerCase())) {
-            // try to fetch suggestions by city
+        const wasGeocodedFromAddress = !!geocoded;
+        const clientProvidedCoords = latitude != null && longitude != null;
+        if (!clientProvidedCoords && wasGeocodedFromAddress && address && (!place_name || place_name.toLowerCase() === address.toLowerCase() || geocoded.confidence < 0.6)) {
             try {
-                const { searchPlacesByCity } = require('../services/placesService');
-                const cityName = address.split(',')[0];
+                const { getCityDiscovery, searchPlacesByCity } = require('../services/placesService');
+                const cityName = (address || '').split(',')[0].trim();
+                const discovery = await getCityDiscovery(cityName);
+                if ((discovery.attractions && discovery.attractions.length > 0) || (discovery.hotels && discovery.hotels.length > 0)) {
+                    return res.status(200).json({ 
+                        ambiguous: true, 
+                        suggestions: discovery.attractions || [], 
+                        discovery, 
+                        center: discovery.center 
+                    });
+                }
                 const suggestions = await searchPlacesByCity(cityName);
                 if (suggestions && suggestions.length > 0) {
                     return res.status(200).json({ ambiguous: true, suggestions });
@@ -699,6 +733,69 @@ router.post('/:tripId/points', authenticateToken, async (req, res) => {
         }
         }
 
+        const lastPoint = await prisma.tripPoint.findFirst({
+            where: { trip_id: tripId },
+            orderBy: { order_index: 'desc' }
+        });
+
+        if (lastPoint && latitude && longitude) {
+            let canRouteDirectly = false;
+            try {
+                const direct = await routing.getRoute(
+                    parseFloat(lastPoint.latitude), parseFloat(lastPoint.longitude),
+                    parseFloat(latitude), parseFloat(longitude),
+                    'driving'
+                );
+                canRouteDirectly = !!direct;
+            } catch (e) {}
+
+            if (!canRouteDirectly) {
+                const originP = await getNearestPort(parseFloat(lastPoint.latitude), parseFloat(lastPoint.longitude));
+                const destP = await getNearestPort(parseFloat(latitude), parseFloat(longitude));
+                if (originP && destP) {
+
+                    return res.status(200).json({
+                        needsPort: true,
+                        suggestion: {
+                            type: 'redirect_ports_pair',
+                            origin_port: originP,
+                            dest_port: destP,
+                            message: 'Чтобы добраться до этого места, нужно пересечь море. Добавьте ближайшие порты.'
+                        },
+                        target: {
+                            place_name: finalPlaceName,
+                            address: finalAddress || '',
+                            latitude: parseFloat(latitude),
+                            longitude: parseFloat(longitude),
+                            day_id: day_id ? parseInt(day_id) : null
+                        }
+                    });
+                } else if (destP) {
+                    return res.status(200).json({
+                        needsPort: true,
+                        suggestion: {
+                            type: 'redirect_to_port',
+                            port: destP,
+                            message: 'Чтобы добраться до этого места, нужно пересечь море. Добавьте ближайший порт.'
+                        },
+                        target: {
+                            place_name: finalPlaceName,
+                            address: finalAddress || '',
+                            latitude: parseFloat(latitude),
+                            longitude: parseFloat(longitude),
+                            day_id: day_id ? parseInt(day_id) : null
+                        }
+                    });
+                }
+            }
+        }
+
+        const maxAfter = await prisma.tripPoint.findFirst({
+            where: { trip_id: tripId },
+            orderBy: { order_index: 'desc' }
+        });
+        const finalOrder = (maxAfter?.order_index || 0) + 1;
+
         const point = await prisma.tripPoint.create({
         data: {
             trip_id: tripId,
@@ -706,7 +803,7 @@ router.post('/:tripId/points', authenticateToken, async (req, res) => {
             address: finalAddress || null,
             latitude: parseFloat(latitude),
             longitude: parseFloat(longitude),
-            order_index: order_index || 0,
+            order_index: order_index || finalOrder,
             day_id: day_id ? parseInt(day_id) : null
         }
         });
@@ -719,7 +816,6 @@ router.post('/:tripId/points', authenticateToken, async (req, res) => {
     }
 });
 
-// Удалить точку
 router.delete('/points/:pointId', authenticateToken, async (req, res) => {
     try {
         await prisma.tripPoint.delete({
@@ -731,9 +827,6 @@ router.delete('/points/:pointId', authenticateToken, async (req, res) => {
     }
 });
 
-
-
-// Генерация дней поездки
 router.post('/:tripId/days/generate', authenticateToken, async (req, res) => {
     try {
         const tripId = parseInt(req.params.tripId);
@@ -773,7 +866,94 @@ router.post('/:tripId/days/generate', authenticateToken, async (req, res) => {
     }
 });
 
-// Получить все дни поездки
+router.post('/:tripId/days/adjust', authenticateToken, async (req, res) => {
+    try {
+        const tripId = parseInt(req.params.tripId);
+        const { start_date, end_date } = req.body;
+
+        const start = new Date(start_date);
+        const end = new Date(end_date);
+        const daysCount = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+
+        const requiredDates = [];
+        for (let i = 0; i < daysCount; i++) {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            requiredDates.push(d.toISOString().split('T')[0]);
+        }
+        const requiredSet = new Set(requiredDates);
+
+        let currentDays = await prisma.tripDay.findMany({
+            where: { trip_id: tripId },
+            orderBy: { day_number: 'asc' }
+        });
+
+        for (const day of currentDays) {
+            const dstr = new Date(day.date).toISOString().split('T')[0];
+            if (!requiredSet.has(dstr)) {
+                await prisma.tripPoint.updateMany({
+                    where: { day_id: day.id },
+                    data: { day_id: null }
+                });
+                await prisma.tripDay.delete({ where: { id: day.id } });
+            }
+        }
+
+        currentDays = await prisma.tripDay.findMany({
+            where: { trip_id: tripId },
+            orderBy: { date: 'asc' }
+        });
+        const existingDateSet = new Set(currentDays.map(d => new Date(d.date).toISOString().split('T')[0]));
+
+        for (let i = 0; i < daysCount; i++) {
+            const d = new Date(start);
+            d.setDate(start.getDate() + i);
+            const dstr = d.toISOString().split('T')[0];
+            if (!existingDateSet.has(dstr)) {
+                await prisma.tripDay.create({
+                    data: {
+                        trip_id: tripId,
+                        day_number: -(i + 1), 
+                        date: d,
+                        title: `День ${i + 1}`
+                    }
+                });
+            }
+        }
+
+        const finalDays = await prisma.tripDay.findMany({
+            where: { trip_id: tripId },
+            orderBy: { date: 'asc' }
+        });
+
+        for (let i = 0; i < finalDays.length; i++) {
+            await prisma.tripDay.update({
+                where: { id: finalDays[i].id },
+                data: { day_number: -(i + 1) }
+            });
+        }
+        
+        for (let i = 0; i < finalDays.length; i++) {
+            await prisma.tripDay.update({
+                where: { id: finalDays[i].id },
+                data: { 
+                    day_number: i + 1,
+                    title: `День ${i + 1}`
+                }
+            });
+        }
+
+        const result = await prisma.tripDay.findMany({
+            where: { trip_id: tripId },
+            orderBy: { day_number: 'asc' }
+        });
+        res.json(result);
+    } catch (error) {
+        console.error('Error adjusting days:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 router.get('/:tripId/days', authenticateToken, async (req, res) => {
     try {
         const tripId = parseInt(req.params.tripId);
@@ -795,7 +975,6 @@ router.get('/:tripId/days', authenticateToken, async (req, res) => {
     }
 });
 
-// Добавить точку в день
 router.post('/:tripId/days/:dayId/points', authenticateToken, async (req, res) => {
     try {
         const tripId = parseInt(req.params.tripId);
@@ -808,7 +987,7 @@ router.post('/:tripId/days/:dayId/points', authenticateToken, async (req, res) =
             return res.status(400).json({ error: 'Адрес обязателен' });
         }
         
-        const lastPoint = await prisma.tripPoint.findFirst({
+        const lastPointInDay = await prisma.tripPoint.findFirst({
             where: { day_id: dayId },
             orderBy: { order_index: 'desc' }
         });
@@ -823,6 +1002,89 @@ router.post('/:tripId/days/:dayId/points', authenticateToken, async (req, res) =
             longitude = geocoded.longitude;
             placeName = geocoded.place_name || address.split(',')[0];
         }
+
+        const lastPoint = await prisma.tripPoint.findFirst({
+            where: { trip_id: tripId },
+            orderBy: { order_index: 'desc' }
+        });
+        if (lastPoint && latitude && longitude) {
+            let canRouteDirectly = false;
+            try {
+                const direct = await routing.getRoute(
+                    parseFloat(lastPoint.latitude), parseFloat(lastPoint.longitude),
+                    parseFloat(latitude), parseFloat(longitude),
+                    'driving'
+                );
+                canRouteDirectly = !!direct;
+            } catch (e) {}
+            if (!canRouteDirectly) {
+                const originP = await getNearestPort(parseFloat(lastPoint.latitude), parseFloat(lastPoint.longitude));
+                const destP = await getNearestPort(parseFloat(latitude), parseFloat(longitude));
+                if (originP && destP) {
+                    return res.status(200).json({
+                        needsPort: true,
+                        suggestion: {
+                            type: 'redirect_ports_pair',
+                            origin_port: originP,
+                            dest_port: destP,
+                            message: 'Чтобы добраться до этого места, нужно пересечь море. Добавьте ближайшие порты.'
+                        },
+                        target: {
+                            place_name: placeName,
+                            address: address,
+                            latitude: parseFloat(latitude),
+                            longitude: parseFloat(longitude),
+                            day_id: dayId
+                        }
+                    });
+                } else if (destP) {
+                    return res.status(200).json({
+                        needsPort: true,
+                        suggestion: {
+                            type: 'redirect_to_port',
+                            port: destP,
+                            message: 'Чтобы добраться до этого места, нужно пересечь море. Добавьте ближайший порт.'
+                        },
+                        target: {
+                            place_name: placeName,
+                            address: address,
+                            latitude: parseFloat(latitude),
+                            longitude: parseFloat(longitude),
+                            day_id: dayId
+                        }
+                    });
+                }
+            }
+        }
+
+        const clientProvidedCoordsDay = latitude != null && longitude != null;
+        if (!clientProvidedCoordsDay && address && (!placeName || placeName.toLowerCase() === address.toLowerCase() || (geocoded && geocoded.confidence < 0.6))) {
+            try {
+                const { getCityDiscovery, searchPlacesByCity } = require('../services/placesService');
+                const cityName = (address || '').split(',')[0].trim();
+                const discovery = await getCityDiscovery(cityName);
+                if ((discovery.attractions && discovery.attractions.length > 0) || (discovery.hotels && discovery.hotels.length > 0) || discovery.center) {
+                    return res.status(200).json({ 
+                        ambiguous: true, 
+                        suggestions: discovery.attractions || [], 
+                        discovery, 
+                        center: discovery.center 
+                    });
+                }
+                const suggestions = await searchPlacesByCity(cityName);
+                if (suggestions && suggestions.length > 0) {
+                    return res.status(200).json({ ambiguous: true, suggestions });
+                }
+            } catch (e) {
+                console.error('Suggestion lookup error (day point):', e.message);
+            }
+        }
+
+        const maxAfter = await prisma.tripPoint.findFirst({
+            where: { trip_id: tripId },
+            orderBy: { order_index: 'desc' }
+        });
+        const thisOrder = (maxAfter?.order_index || 0) + 1;
         
         const point = await prisma.tripPoint.create({
             data: {
@@ -832,7 +1094,7 @@ router.post('/:tripId/days/:dayId/points', authenticateToken, async (req, res) =
                 address: address,
                 latitude: latitude,
                 longitude: longitude,
-                order_index: (lastPoint?.order_index || 0) + 1
+                order_index: thisOrder
             }
         });
         
@@ -844,7 +1106,6 @@ router.post('/:tripId/days/:dayId/points', authenticateToken, async (req, res) =
     }
 });
 
-// Назначить точку на день
 router.put('/points/:pointId/assign-day', authenticateToken, async (req, res) => {
     try {
         const pointId = parseInt(req.params.pointId);
@@ -862,7 +1123,6 @@ router.put('/points/:pointId/assign-day', authenticateToken, async (req, res) =>
     }
 });
 
-// Убрать точку из дня
 router.put('/points/:pointId/unassign', authenticateToken, async (req, res) => {
     try {
         const pointId = parseInt(req.params.pointId);

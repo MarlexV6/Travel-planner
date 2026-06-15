@@ -1,53 +1,127 @@
 const axios = require('axios');
 
-// Проверить, что место находится на суше, а не в воде
+
 function isValidLandLocation(location) {
-    // Исключаем водные объекты
+    if (!location) return false;
+
     const waterTypes = [
         'sea', 'ocean', 'strait', 'channel', 'bay', 'gulf', 'water',
-        'river', 'lake', 'pond', 'creek', 'stream', 'waterway'
+        'river', 'lake', 'pond', 'creek', 'stream', 'waterway', 'wetland'
     ];
-    
-    const waterClasses = ['natural', 'waterway'];
-    
-    // Проверяем тип объекта
-    if (location.type && waterTypes.includes(location.type.toLowerCase())) {
+    const waterClasses = ['natural', 'waterway', 'place'];
+
+    const type = (location.type || '').toLowerCase();
+    const cls = (location.class || '').toLowerCase();
+
+
+    if (waterTypes.includes(type)) return false;
+    if (cls === 'waterway' || (cls === 'natural' && type === 'water')) return false;
+
+    if ((cls === 'natural' || cls === 'place') && waterTypes.includes(type)) {
         return false;
     }
-    
-    // Проверяем класс объекта
-    if (location.class && waterClasses.includes(location.class) && 
-        location.type && waterTypes.includes(location.type.toLowerCase())) {
-        return false;
-    }
-    
-    // Для природных объектов проверяем, это не водоем
-    if (location.class === 'natural' && location.type === 'water') {
-        return false;
-    }
-    
-    // Хорошее место должно иметь хоть какой-то адрес (город, деревню и т.д.)
+
+
     if (location.address) {
-        const hasCity = location.address.city || location.address.town || 
-                       location.address.village || location.address.county ||
-                       location.address.state || location.address.country;
-        if (!hasCity) {
-            return false;
+        const addr = location.address;
+        const hasCityLike = !!(addr.city || addr.town || addr.village || addr.municipality || addr.county);
+        const hasGoodPlace = !!(addr.road || addr.amenity || addr.tourism || addr.shop || addr.building);
+        const hasCountry = !!addr.country;
+
+        if (!hasCityLike && !hasGoodPlace && !hasCountry) {
+
+            if (parseFloat(location.importance || 0) < 0.25) return false;
         }
     }
-    
+
+
+    const importance = parseFloat(location.importance || location.confidence || 0);
+    const isGoodClass = cls === 'place' || cls === 'boundary' || cls === '';
+    if (importance < 0.2 && !isGoodClass) {
+
+        return false;
+    }
     return true;
+}
+
+async function geocodeCity(cityName) {
+    try {
+        const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+            params: {
+                q: cityName,
+                format: 'json',
+                limit: 5,
+                addressdetails: 1,
+                'accept-language': 'ru',
+            },
+            headers: { 'User-Agent': 'TravelPlannerApp/1.0' },
+            timeout: 8000
+        });
+
+        if (!response.data || response.data.length === 0) return null;
+
+        let best = null;
+        let bestScore = -1;
+
+        for (const loc of response.data) {
+            if (!isValidLandLocation(loc)) continue;
+
+            const imp = parseFloat(loc.importance || 0);
+            const addr = loc.address || {};
+            let score = imp;
+
+            if (addr.city || addr.town || addr.village) score += 1.5;
+            if (loc.class === 'place') score += 0.8;
+            if (loc.type === 'city' || loc.type === 'town') score += 1.0;
+
+            if (score > bestScore) {
+                bestScore = score;
+                best = loc;
+            }
+        }
+
+        if (!best) best = response.data[0]; 
+
+        return {
+            latitude: parseFloat(best.lat),
+            longitude: parseFloat(best.lon),
+            display_name: best.display_name,
+            address: best.address,
+            place_name: best.address?.city || best.address?.town || best.address?.village || cityName,
+            importance: parseFloat(best.importance || 0.5)
+        };
+    } catch (e) {
+        console.error('geocodeCity error:', e.message);
+        return null;
+    }
 }
 
 async function geocodeAddress(address) {
     try {
         console.log('Geocoding address:', address);
-        
-        const response = await axios.get('https://nominatim.openstreetmap.org/search', {
+        const isLikelyCity = address && address.trim().split(',').length <= 2 && !/\d/.test(address);
+        let response;
+
+        if (isLikelyCity) {
+            const cityResult = await geocodeCity(address);
+            if (cityResult) {
+                return {
+                    latitude: cityResult.latitude,
+                    longitude: cityResult.longitude,
+                    display_name: cityResult.display_name || address,
+                    address: cityResult.address ? 
+                        (cityResult.address.city || cityResult.address.town || cityResult.address.village || address) : address,
+                    place_name: cityResult.place_name || address.split(',')[0],
+                    confidence: cityResult.importance || 0.7
+                };
+            }
+        }
+
+        response = await axios.get('https://nominatim.openstreetmap.org/search', {
             params: {
                 q: address,
                 format: 'json',
-                limit: 10,  // Получаем несколько результатов
+                limit: 8,
                 addressdetails: 1,
                 'accept-language': 'ru'
             },
@@ -58,22 +132,27 @@ async function geocodeAddress(address) {
         });
         
         if (response.data && response.data.length > 0) {
-            // Фильтруем результаты: выбираем первый валидный результат
-            let validLocation = null;
+            let best = null;
+            let bestScore = -1;
+
             for (const location of response.data) {
-                if (isValidLandLocation(location)) {
-                    validLocation = location;
-                    break;
+                if (!isValidLandLocation(location)) continue;
+
+                const imp = parseFloat(location.importance || 0);
+                const addr = location.address || {};
+                let score = imp * 10;
+
+                if (addr.city || addr.town || addr.village) score += 15;
+                if (location.class === 'place' || location.type === 'city' || location.type === 'town') score += 12;
+                if (addr.road || addr.amenity) score += 5;
+
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = location;
                 }
             }
-            
-            // Если нет валидного результата на суше, используем первый результат с предупреждением
-            if (!validLocation) {
-                console.warn('No land location found for address:', address);
-                validLocation = response.data[0];
-            }
-            
-            // Формируем понятный адрес
+
+            let validLocation = best || response.data[0];
             let formattedAddress = '';
             if (validLocation.address) {
                 const parts = [];
@@ -85,8 +164,7 @@ async function geocodeAddress(address) {
                 if (validLocation.address.country) parts.push(validLocation.address.country);
                 formattedAddress = parts.join(', ');
             }
-            
-            // Определяем название места
+
             let placeName = '';
             if (validLocation.address) {
                 placeName = validLocation.address.name || 
@@ -132,7 +210,7 @@ async function reverseGeocode(lat, lon) {
         });
         
         if (response.data) {
-            // Проверяем, не находимся ли мы в воде
+
             if (response.data.address) {
                 const isLand = isValidLandLocation(response.data);
                 if (!isLand) {
@@ -147,7 +225,7 @@ async function reverseGeocode(lat, lon) {
                 const addr = response.data.address;
                 const parts = [];
                 
-                // Название места
+
                 placeName = addr.name || 
                            addr.road || 
                            addr.city || 
@@ -155,7 +233,7 @@ async function reverseGeocode(lat, lon) {
                            addr.village ||
                            'Новое место';
                 
-                // Форматируем адрес
+
                 if (addr.road) parts.push(addr.road);
                 if (addr.house_number) parts.push(addr.house_number);
                 if (addr.city || addr.town || addr.village) {

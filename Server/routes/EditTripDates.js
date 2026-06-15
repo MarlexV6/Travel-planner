@@ -26,28 +26,26 @@ function EditTripDates({ trip, onClose, onUpdate }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Если есть предупреждения о достижимости
+
       if (response.data.validation && !response.data.validation.isFeasible) {
         setWarning({
           type: 'feasibility',
-          message: '⚠️ С новыми датами маршрут стал невыполнимым!',
+          message: 'С новыми датами маршрут стал невыполнимым!',
           details: response.data.validation.warnings
         });
       }
 
-      // Если есть недоступные даты для точек
       if (response.data.unavailableDates && response.data.unavailableDates.length > 0) {
         setWarning({
           type: 'unavailable_dates',
-          message: `⚠️ ${response.data.unavailableDates.length} точек выходят за пределы новых дат`,
+          message: `${response.data.unavailableDates.length} точек выходят за пределы новых дат`,
           details: response.data.unavailableDates
         });
       }
 
-      // Если нет критических ошибок, обновляем
       if (response.data.trip) {
         onUpdate(response.data.trip);
-        // Если нет предупреждений, закрываем через 1.5 секунды
+
         if (!warning) {
           setTimeout(onClose, 1500);
         }
@@ -114,12 +112,12 @@ function EditTripDates({ trip, onClose, onUpdate }) {
           {/* Ошибка: конфликт с другой поездкой */}
           {error && error.type === 'conflict' && (
             <div style={styles.errorContainer}>
-              <div style={styles.errorTitle}>🚫 Конфликт дат</div>
+              <div style={styles.errorTitle}>Конфликт дат</div>
               <div>{error.message}</div>
               {error.conflict && (
                 <div style={styles.conflictInfo}>
                   <strong>Конфликтующая поездка:</strong>
-                  <div>📅 {new Date(error.conflict.start_date).toLocaleDateString('ru-RU')} - {new Date(error.conflict.end_date).toLocaleDateString('ru-RU')}</div>
+                  <div>{new Date(error.conflict.start_date).toLocaleDateString('ru-RU')} - {new Date(error.conflict.end_date).toLocaleDateString('ru-RU')}</div>
                   <button 
                     onClick={() => window.location.href = `/trips/${error.conflict.id}`}
                     style={styles.viewButton}

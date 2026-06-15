@@ -44,7 +44,6 @@ function TripCalendar() {
     const tripStartDate = new Date(trip.start_date);
     setSelectedTrip(trip);
     setSelectedDate(tripStartDate);
-    // Перелистываем календарь на месяц начала поездки
     setActiveStartDate(new Date(tripStartDate.getFullYear(), tripStartDate.getMonth(), 1));
     fetchTripDays(trip.id);
   };
@@ -105,7 +104,7 @@ function TripCalendar() {
         {selectedTrip && (
           <div className="selected-trip-details">
             <h4>Детали: {selectedTrip.title}</h4>
-            {tripDays.length === 0 && <p>Нет запланированных дней (сгенерируйте дни в планировщике)</p>}
+            {tripDays.length === 0 && <p>Нет запланированных дней</p>}
             <ul>
               {tripDays.map(day => (
                 <li key={day.id}>
@@ -132,5 +131,3 @@ function TripCalendar() {
 export default TripCalendar;
 
 
-
-// маршруты строятся неправильно. Ещё раз повторяю. При добавлении точки и при невозможности отправиться в эту точку на машине, должен автоматически искаться ближайший порт (автоматически добавляется точка для этого порта) и идёт до ближайшего ко второй точке порта (который нужен для передвижения к второй точке) откуда уже будет построен маршрут до второй точки
