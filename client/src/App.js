@@ -7,7 +7,6 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import TripDetails from './components/TripDetails';
-import TripMap from './components/TripMap';
 import TripCalendar from './components/Calendar';
 import Stats from './components/Stats';
 import AdminUsers from './components/AdminUsers';
@@ -27,7 +26,6 @@ function App() {
           <Route path="/oauth-callback" element={<OAuthCallback />} />
           <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/trips/:id" element={<PrivateRoute><TripDetails /></PrivateRoute>} />
-          <Route path="/trips/:id/map" element={<PrivateRoute><TripMap /></PrivateRoute>} />
           <Route path="/calendar" element={<PrivateRoute><TripCalendar /></PrivateRoute>} />
           <Route path="/stats" element={<PrivateRoute><Stats /></PrivateRoute>} />
           <Route path="/admin/users" element={<PrivateRoute adminOnly><AdminUsers /></PrivateRoute>} />

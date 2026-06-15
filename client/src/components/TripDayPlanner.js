@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Modal from './Modal';
 import '../css/TripDayPlanner.css';
 
-function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
+function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate, onDaySelect, onPointClick }) {
   const { token } = useAuth();
   const [days, setDays] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -214,7 +214,10 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
         {days.map(day => (
           <button
             key={day.id}
-            onClick={() => setSelectedDay(day.id)}
+            onClick={() => {
+              setSelectedDay(day.id);
+              if (onDaySelect) onDaySelect(day.id);
+            }}
             className={`day-button ${selectedDay === day.id ? 'day-button-active' : ''}`}
           >
             День {day.day_number}
@@ -232,15 +235,24 @@ function TripDayPlanner({ tripId, startDate, endDate, onPointsUpdate }) {
               <p className="no-points">Нет запланированных мест</p>
             ) : (
               dayPoints.map((point, idx) => (
-                <div key={point.id} className="day-point-card">
+                <div 
+                  key={point.id} 
+                  className="day-point-card"
+                  onClick={() => {
+                    if (onPointClick && point.latitude && point.longitude) {
+                      onPointClick(parseFloat(point.latitude), parseFloat(point.longitude));
+                    }
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
                   <div className="day-point-number">{idx + 1}</div>
                   <div className="day-point-details">
                     <strong>{point.place_name}</strong>
                     <span className="day-point-address">{point.address}</span>
                   </div>
                   <div className="day-point-actions">
-                    <button onClick={() => removePointFromDay(point.id)} className="day-point-remove" title="Убрать из дня">Убрать</button>
-                    <button onClick={() => { setPointToDelete(point); setShowDeleteModal(true); }} className="day-point-delete" title="Удалить точку">Удалить</button>
+                    <button onClick={(e) => { e.stopPropagation(); removePointFromDay(point.id); }} className="day-point-remove" title="Убрать из дня">Убрать</button>
+                    <button onClick={(e) => { e.stopPropagation(); setPointToDelete(point); setShowDeleteModal(true); }} className="day-point-delete" title="Удалить точку">Удалить</button>
                   </div>
                 </div>
               ))

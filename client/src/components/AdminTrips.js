@@ -85,9 +85,6 @@ function AdminTrips() {
               <Link to={`/trips/${trip.id}`}>
                 <button className="at-details-button">Подробнее</button>
               </Link>
-              <Link to={`/trips/${trip.id}/map`}>
-                <button className="at-map-button">Карта</button>
-              </Link>
             </div>
           </div>
         ))}

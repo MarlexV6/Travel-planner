@@ -25,7 +25,7 @@
   display: flex;
   gap: 12px;
 }
-.btn-edit, .btn-delete, .btn-map, .btn-back {
+.btn-edit, .btn-delete, .btn-back {
   font-size: 14px;
 }
 .btn-delete {

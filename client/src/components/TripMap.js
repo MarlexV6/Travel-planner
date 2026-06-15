@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -6,7 +6,6 @@ import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import Modal from './Modal';
-import PlaceDetailModal from './PlaceDetailModal';
 import CityPlacesPicker from './CityPlacesPicker';
 import '../css/TripMap.css';
 
@@ -48,7 +47,7 @@ function AddMarkerOnClick({ onAddPoint }) {
   return null;
 }
 
-function TripMap() {
+function TripMap({ embedded = false, refreshKey = 0, onPointsAdded, selectedDayId: externalSelectedDayId, onDaySelect, flyToPoint: externalFlyToPoint, setFlyToPoint: setExternalFlyToPoint }) {
   const { id } = useParams();
   const { token } = useAuth();
   const [trip, setTrip] = useState(null);
@@ -77,7 +76,6 @@ function TripMap() {
 
   const [pendingSeaTarget, setPendingSeaTarget] = useState(null); 
 
-
   const [alertMessage, setAlertMessage] = useState(null);
 
   useEffect(() => {
@@ -85,6 +83,25 @@ function TripMap() {
     fetchPoints();
     fetchDays();
   }, [id]);
+
+  useEffect(() => {
+    if (refreshKey > 0) {
+      fetchPoints();
+      fetchDays();
+    }
+  }, [refreshKey]);
+
+  useEffect(() => {
+    if (externalSelectedDayId) {
+      setSelectedDayId(externalSelectedDayId);
+    }
+  }, [externalSelectedDayId]);
+
+  useEffect(() => {
+    if (externalFlyToPoint) {
+      setFlyToPoint(externalFlyToPoint);
+    }
+  }, [externalFlyToPoint]);
 
   useEffect(() => {
     if (points.length >= 2) fetchRoute(selectedDayId || null);
@@ -96,6 +113,9 @@ function TripMap() {
     if (flyToPoint && mapInstance) {
       mapInstance.flyTo([flyToPoint.lat, flyToPoint.lng], 15, { duration: 1.5 });
       setFlyToPoint(null);
+      if (setExternalFlyToPoint) {
+        setExternalFlyToPoint(null);
+      }
     }
   }, [flyToPoint, mapInstance]);
 
@@ -117,7 +137,9 @@ function TripMap() {
     try {
       const res = await axios.get(`/api/trips/${id}/days`, { headers: { Authorization: `Bearer ${token}` } });
       setDays(res.data);
-      if (res.data.length > 0) setSelectedDayId(res.data[0].id.toString());
+      if (res.data.length > 0 && !externalSelectedDayId) {
+        setSelectedDayId(res.data[0].id.toString());
+      }
     } catch (err) {
       console.error('Error fetching days:', err);
       setDays([]);
@@ -170,7 +192,10 @@ function TripMap() {
       const response = await axios.post(`/api/trips/${id}/optimize`, payload, { headers: { Authorization: `Bearer ${token}` } });
       setOptimizeResult(response.data);
       setShowOptimizeResultModal(true);
-      if (response.data.improvement > 0) await fetchPoints();
+      if (response.data.improvement > 0) {
+        await fetchPoints();
+        if (onPointsAdded) onPointsAdded();
+      }
     } catch (err) {
       setAlertMessage(err.response?.data?.error || 'Ошибка оптимизации');
     } finally {
@@ -241,6 +266,7 @@ function TripMap() {
       setShowAddPointModal(false);
       setPointName('');
       setPendingPoint(null);
+      if (onPointsAdded) onPointsAdded();
     } catch (err) {
       console.error(err);
       setAlertMessage('Ошибка добавления точки');
@@ -310,6 +336,7 @@ function TripMap() {
       setShowPortSuggestionModal(false);
       setPortSuggestion(null);
       await fetchRoute();
+      if (onPointsAdded) onPointsAdded();
     } catch (err) { setAlertMessage('Ошибка добавления порта'); }
   };
 
@@ -355,6 +382,7 @@ function TripMap() {
       setShowPortsPairModal(false);
       setPortsPairSuggestion(null);
       await fetchRoute();
+      if (onPointsAdded) onPointsAdded();
     } catch (err) { setAlertMessage('Ошибка добавления портов'); }
   };
 
@@ -416,7 +444,6 @@ function TripMap() {
         }, { headers: { Authorization: `Bearer ${token}` } });
         addedPorts.push(r1.data, r2.data);
       } else if (suggestion.type === 'redirect_to_airport' && suggestion.airport) {
-        // legacy single airport
         const p = suggestion.airport;
         const resp = await axios.post(`/api/trips/${id}/points`, {
           place_name: `Аэропорт: ${p.name}`,
@@ -445,7 +472,6 @@ function TripMap() {
       const insertBeforeIdx = Math.min(destOriginalIndex, finalOrder.length);
       finalOrder.splice(insertBeforeIdx, 0, ...addedPorts);
 
-      // Properly persist new order by updating order_index (and day_id)
       const updatePromises = finalOrder.map((pt, idx) =>
         axios.put(`/api/trips/points/${pt.id}/assign-day`, {
           day_id: pt.day_id || null,
@@ -460,6 +486,7 @@ function TripMap() {
       const portNames = addedPorts.map(p => p.place_name).join(', ');
       setAlertMessage(`Автоматически добавлен(ы) пункт(ы) пересадки: ${portNames}\n(пересечение обработано)`);
 
+      if (onPointsAdded) onPointsAdded();
       return true;
     } catch (err) {
       console.error('autoAddSeaPorts error:', err);
@@ -478,6 +505,7 @@ function TripMap() {
         setPoints(points.filter(p => p.id !== pointToDelete.id));
         setShowDeleteModal(false);
         setPointToDelete(null);
+        if (onPointsAdded) onPointsAdded();
       } catch (err) { setAlertMessage('Ошибка удаления'); }
     }
   };
@@ -538,48 +566,25 @@ function TripMap() {
     return segments.length > 0 ? segments : [positions];
   };
 
-  const rawRoutePositions = route?.polyline && route.polyline.length > 0
-    ? route.polyline.map(p => [p.lat, p.lng])
-    : positions;
   const routeSegments = getRouteSegments(route?.polyline || [], filteredPoints);
 
   return (
     <div className="tm-container">
-      <div className="tm-header">
-        <h1>{trip?.title || 'Маршрут'} - Карта</h1>
-        <Link to={`/trips/${id}`}>
-          <button className="tm-back-button">Назад к поездке</button>
-        </Link>
-      </div>
+      {!embedded && (
+        <div className="tm-header">
+          <h1>{trip?.title || 'Маршрут'} - Карта</h1>
+          <Link to={`/trips/${id}`}>
+            <button className="tm-back-button">Назад к поездке</button>
+          </Link>
+        </div>
+      )}
 
 
 
-      {/* Рекомендации достопримечательностей через AI */}
-      <div className="tm-places-section">
-        <h3>Рекомендации достопримечательностей</h3>
-        <CityPlacesPicker tripId={id} onPointsAdded={fetchPoints} />
-      </div>
-
-      {/* Переключатель дней на карте (требование: разделение по дням) */}
-      {days.length > 0 && (
-        <div className="tm-day-navigation">
-          <button
-            onClick={() => setSelectedDayId('')}
-            className={`day-button ${!selectedDayId ? 'day-button-active' : ''}`}
-          >
-            Все дни
-          </button>
-          {days.map(day => (
-            <button
-              key={day.id}
-              onClick={() => setSelectedDayId(day.id.toString())}
-              className={`day-button ${selectedDayId === day.id.toString() ? 'day-button-active' : ''}`}
-            >
-              День {day.day_number}
-              <br />
-              <small>{new Date(day.date).toLocaleDateString('ru-RU')}</small>
-            </button>
-          ))}
+      {!embedded && (
+        <div className="tm-places-section">
+          <h3>Рекомендации достопримечательностей</h3>
+          <CityPlacesPicker tripId={id} onPointsAdded={fetchPoints} />
         </div>
       )}
 
@@ -623,27 +628,8 @@ function TripMap() {
         </MapContainer>
       </div>
 
-      <div className="tm-points-section">
-        <h3>Точки маршрута {selectedDayId ? `(День ${days.find(d => d.id.toString() === selectedDayId)?.day_number || ''})` : ''} ({filteredPoints.length}):</h3>
-        {filteredPoints.length === 0 ? (
-          <div className="tm-empty-state"><p>Нет добавленных точек {selectedDayId ? 'для этого дня' : ''}</p><p>Кликните на карту, чтобы добавить первую точку</p></div>
-        ) : (
-          <div className="tm-points-grid">
-            {filteredPoints.map((point, idx) => (
-              <div key={point.id} className="tm-point-card" onClick={() => centerOnPoint(parseFloat(point.latitude), parseFloat(point.longitude))}>
-                <div className="tm-point-number">{idx + 1}</div>
-                <div className="tm-point-info">
-                  <div className="tm-point-name">{point.place_name}</div>
-                  <div className="tm-point-address">{point.address ? point.address.substring(0, 60) : `${point.latitude}, ${point.longitude}`}</div>
-                </div>
-                <button onClick={(e) => { e.stopPropagation(); setPointToDelete(point); setShowDeleteModal(true); }} className="tm-remove-button">X</button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      
 
-      {/* Модалки */}
       <Modal isOpen={showAddPointModal} onClose={() => setShowAddPointModal(false)} onConfirm={addPointWithName}
         title="Добавление точки маршрута" type="prompt" confirmText="Добавить" cancelText="Отмена"
         inputValue={pointName} onInputChange={setPointName} inputPlaceholder="Введите название места">

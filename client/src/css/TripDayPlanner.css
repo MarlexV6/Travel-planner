@@ -14,10 +14,10 @@
 }
 .day-navigation {
   display: flex;
-  gap: 8px;
   overflow-x: auto;
   padding-bottom: 8px;
   margin-bottom: 20px;
+  flex-wrap: wrap;
 }
 .day-button {
   background-color: #21262d;
@@ -27,6 +27,7 @@
   min-width: 80px;
   text-align: center;
   cursor: pointer;
+  margin: 5px;
 }
 .day-button-active {
   background-color: #2f81f7;

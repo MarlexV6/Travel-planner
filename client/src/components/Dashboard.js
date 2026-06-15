@@ -243,9 +243,6 @@ function Dashboard() {
                     <Link to={`/trips/${trip.id}`}>
                       <button className="dash-details-button">Подробнее</button>
                     </Link>
-                    <Link to={`/trips/${trip.id}/map`}>
-                      <button className="dash-map-button">Карта</button>
-                    </Link>
                     <button 
                       onClick={() => {
                         setTripToDelete(trip);

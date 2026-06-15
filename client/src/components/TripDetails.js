@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import TripDayPlanner from './TripDayPlanner';
 import CityPlacesPicker from './CityPlacesPicker';
+import TripMap from './TripMap';
 import '../css/TripDetails.css';
 
 function TripDetails() {
@@ -27,7 +28,14 @@ function TripDetails() {
   const [days, setDays] = useState([]);
   const [selectedDayId, setSelectedDayId] = useState('');
   const [plannerRefreshKey, setPlannerRefreshKey] = useState(0);
+  const [mapRefreshKey, setMapRefreshKey] = useState(0);
+  const [flyToPoint, setFlyToPoint] = useState(null);
 
+  const handleDaySelect = (dayId) => {
+    if (dayId) {
+      setSelectedDayId(dayId.toString());
+    }
+  };
 
   const [showDiscoveryModal, setShowDiscoveryModal] = useState(false);
   const [discoveryData, setDiscoveryData] = useState(null);
@@ -134,7 +142,8 @@ function TripDetails() {
 
       await fetchDays();
       await fetchPoints();
-      setPlannerRefreshKey(k => k + 1); 
+      setPlannerRefreshKey(k => k + 1);
+      setMapRefreshKey(k => k + 1);
       setShowEditModal(false);
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
@@ -232,6 +241,7 @@ function TripDetails() {
       fetchPoints();
       fetchDays();
       setPlannerRefreshKey(k => k + 1);
+      setMapRefreshKey(k => k + 1);
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       setError(error.response?.data?.error || 'Ошибка добавления точки');
@@ -249,6 +259,7 @@ function TripDetails() {
       setSuccess('Точка удалена');
       fetchPoints();
       fetchDays();
+      setMapRefreshKey(k => k + 1);
       setShowDeletePointModal(false);
       setPointToDelete(null);
       setTimeout(() => setSuccess(null), 2000);
@@ -313,6 +324,7 @@ function TripDetails() {
       fetchPoints();
       fetchDays();
       setPlannerRefreshKey(k => k + 1);
+      setMapRefreshKey(k => k + 1);
       setShowDiscoveryModal(false);
       setDiscoveryData(null);
       setSelectedDiscovery([]);
@@ -368,6 +380,7 @@ function TripDetails() {
       fetchPoints();
       fetchDays();
       setPlannerRefreshKey(k => k + 1);
+      setMapRefreshKey(k => k + 1);
       setShowSeaPortModal(false);
       setSeaPortSuggestion(null);
       setPendingSeaTargetDetails(null);
@@ -400,9 +413,6 @@ function TripDetails() {
           <h1>{trip.title}</h1>
           <div className="trip-details-actions">
             <button className="btn-edit" onClick={() => setShowEditModal(true)}>Редактировать</button>
-            <Link to={`/trips/${id}/map`}>
-              <button className="btn-map">Карта</button>
-            </Link>
             <button className="btn-delete" onClick={() => { setTripToDelete(trip); setShowDeleteTripModal(true); }}>Удалить поездку</button>
           </div>
         </div>
@@ -415,7 +425,6 @@ function TripDetails() {
       {error && <div className="error-message">{error}</div>}
       {success && <div className="success-message">{success}</div>}
 
-      {/* Блок добавления точки по адресу */}
       <div className="add-point-section">
         <h3>Добавить новую точку по адресу</h3>
         <form onSubmit={addPointByAddress} className="add-point-form">
@@ -448,19 +457,32 @@ function TripDetails() {
         </form>
       </div>
 
-      {/* Рекомендации достопримечательностей */}
-      <CityPlacesPicker tripId={id} onPointsAdded={() => { fetchPoints(); fetchDays(); setPlannerRefreshKey(k => k + 1); }} />
+      <CityPlacesPicker tripId={id} onPointsAdded={() => { fetchPoints(); fetchDays(); setPlannerRefreshKey(k => k + 1); setMapRefreshKey(k => k + 1); }} />
 
-      {/* Планировщик по дням */}
+
       <TripDayPlanner
         key={plannerRefreshKey}
         tripId={id}
         startDate={trip.start_date}
         endDate={trip.end_date}
-        onPointsUpdate={() => { fetchPoints(); fetchDays(); }}
+        onPointsUpdate={() => { fetchPoints(); fetchDays(); setMapRefreshKey(k => k + 1); }}
+        onDaySelect={handleDaySelect}
+        onPointClick={(lat, lng) => setFlyToPoint({ lat, lng })}
       />
 
-      {/* Модальное окно редактирования */}
+
+      <TripMap
+        embedded
+        refreshKey={mapRefreshKey}
+        selectedDayId={selectedDayId}
+        onDaySelect={handleDaySelect}
+        flyToPoint={flyToPoint}
+        setFlyToPoint={setFlyToPoint}
+        onPointsAdded={() => { fetchPoints(); fetchDays(); setPlannerRefreshKey(k => k + 1); }}
+      />
+
+      
+
       {showEditModal && (
         <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -491,7 +513,6 @@ function TripDetails() {
         </div>
       )}
 
-      {/* Модалка удаления точки */}
       {showDeletePointModal && pointToDelete && (
         <div className="modal-overlay" onClick={() => setShowDeletePointModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -508,7 +529,6 @@ function TripDetails() {
         </div>
       )}
 
-      {/* Модалка удаления поездки */}
       {showDeleteTripModal && tripToDelete && (
         <div className="modal-overlay" onClick={() => setShowDeleteTripModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
